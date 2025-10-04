@@ -1,0 +1,17 @@
+# Node modules
+node_modules/
+frontend/node_modules/
+
+# Cache files
+frontend/node_modules/.cache/
+.cache/
+
+# Build outputs
+build/
+dist/
+
+# Python venv
+venv/
+
+# Env files
+.env
