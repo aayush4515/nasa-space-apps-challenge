@@ -91,7 +91,7 @@ function Dashboard({ currentModel, searchResults }) {
     totalSearches: 0,
     totalPredictions: 0,
     exoplanetsFound: 0,
-    modelAccuracy: 0.91,
+    modelAccuracy: 0.9117,
     lastSearch: null
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -115,7 +115,7 @@ function Dashboard({ currentModel, searchResults }) {
           totalSearches: dbStats.total_predictions || results.length,
           totalPredictions: dbStats.total_predictions || results.length,
           exoplanetsFound: dbStats.exoplanets_found || exoplanetsFound,
-          modelAccuracy: 0.9137, // Fixed accuracy for pre-trained model
+          modelAccuracy: 0.9117, // Fixed accuracy for pre-trained model
           lastSearch: results.length > 0 ? results[results.length - 1] : null
         };
         
@@ -134,7 +134,7 @@ function Dashboard({ currentModel, searchResults }) {
           totalSearches: results.length,
           totalPredictions: results.length,
           exoplanetsFound: exoplanetsFound,
-          modelAccuracy: 0.9137,
+          modelAccuracy: 0.9117,
           lastSearch: results.length > 0 ? results[results.length - 1] : null
         });
       } finally {
@@ -162,7 +162,7 @@ function Dashboard({ currentModel, searchResults }) {
         <WelcomeTitle>Welcome to NASA Exoplanet Detector</WelcomeTitle>
         <WelcomeSubtitle>
           Harness the power of AI to analyze exoplanet candidates in NASA mission data. 
-          Get ML predictions with confidence scores for Kepler and TESS candidates.
+          Get ML predictions with confidence scores for Kepler candidates.
         </WelcomeSubtitle>
       </WelcomeSection>
 
