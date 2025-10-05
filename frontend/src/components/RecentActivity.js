@@ -73,12 +73,18 @@ function RecentActivity({ searchResults }) {
 
   // Combine and sort activities
   const activities = [
-    ...searchResults.map(result => ({
-      type: 'search',
-      title: 'ML Prediction',
-      description: `Predicted candidate ${result.exoplanet_id} with ${result.prediction?.confidence || 'N/A'}% confidence`,
-      timestamp: new Date().toISOString()
-    }))
+    ...searchResults.map(result => {
+      const isExoplanet = result.prediction?.is_exoplanet;
+      const status = isExoplanet ? 'Confirmed' : 'Rejected';
+      const dataset = result.dataset === 'kepler' ? 'Kepler' : 'TESS';
+      
+      return {
+        type: 'search',
+        title: 'ML Prediction',
+        description: `${result.exoplanet_id} tested from ${dataset} dataset. ${status} as exoplanet.`,
+        timestamp: result.timestamp || new Date().toISOString()
+      };
+    })
   ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 5);
 
   if (activities.length === 0) {

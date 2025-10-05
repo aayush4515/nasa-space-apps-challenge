@@ -5,12 +5,18 @@ import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import Search from './components/Search';
 import Analytics from './components/Analytics';
+import History from './components/History';
+import DatabaseService from './services/DatabaseService';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const AppContainer = styled.div`
   min-height: 100vh;
   background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+  background-image: url('');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   background-attachment: fixed;
   position: relative;
 `;
@@ -26,8 +32,18 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // FIXME: Load initial data from backend
-    // fetchSearchHistory();
+    // Load predictions from database on app start
+    const loadInitialData = async () => {
+      try {
+        const data = await DatabaseService.loadAllData();
+        setSearchResults(data.predictions);
+        console.log('Loaded initial data from database:', data);
+      } catch (error) {
+        console.error('Error loading initial data:', error);
+      }
+    };
+
+    loadInitialData();
   }, []);
 
   const handleModelSwitch = (modelType) => {
@@ -36,9 +52,22 @@ function App() {
     console.log(`Switched to ${modelType} model`);
   };
 
-  const handleSearchResult = (searchData) => {
+  const handleSearchResult = async (searchData) => {
+    // Update local state
     setSearchResults(prev => [...prev, searchData]);
-    // FIXME: Implement search result handling logic
+    
+    // Save to database
+    try {
+      const success = await DatabaseService.savePrediction(searchData);
+      if (success) {
+        console.log('Prediction saved to database');
+      } else {
+        console.error('Failed to save prediction to database');
+      }
+    } catch (error) {
+      console.error('Error saving prediction:', error);
+    }
+    
     console.log('Search completed:', searchData);
   };
 
@@ -68,6 +97,14 @@ function App() {
                   onSearchResult={handleSearchResult}
                   isLoading={isLoading}
                   setIsLoading={setIsLoading}
+                />
+              } 
+            />
+            <Route 
+              path="/history" 
+              element={
+                <History 
+                  searchResults={searchResults}
                 />
               } 
             />

@@ -216,7 +216,7 @@ function Header({ currentModel, onModelSwitch }) {
                 active={true}
                 disabled={true}
               >
-                Pre-trained
+                XGBoost
               </ToggleButton>
             </ModelToggle>
           </ModelSelector>

@@ -4,6 +4,7 @@ import StatsCard from './StatsCard';
 import RecentActivity from './RecentActivity';
 import ModelStatus from './ModelStatus';
 import QuickActions from './QuickActions';
+import DatabaseService from '../services/DatabaseService';
 
 const DashboardContainer = styled.div`
   max-width: 1200px;
@@ -89,28 +90,53 @@ function Dashboard({ currentModel, searchResults }) {
   const [dashboardData, setDashboardData] = useState({
     totalSearches: 0,
     totalPredictions: 0,
-    modelAccuracy: 0.92,
+    exoplanetsFound: 0,
+    modelAccuracy: 0.91,
     lastSearch: null
   });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // FIXME: Fetch dashboard data from backend
+    // Load dashboard data from database
     const fetchDashboardData = async () => {
       try {
         setIsLoading(true);
         
-        // Placeholder data - replace with actual API calls
-        const mockData = {
-          totalSearches: searchResults.length,
-          totalPredictions: Math.floor(Math.random() * 1000) + 500,
-          modelAccuracy: 0.92, // Fixed accuracy for pre-trained model
-          lastSearch: searchResults.length > 0 ? searchResults[searchResults.length - 1] : null
+        // Try to get stats from database first
+        const dbStats = await DatabaseService.loadStats();
+        
+        // Fallback to local calculation if database is empty
+        const results = searchResults || [];
+        const exoplanetsFound = results.filter(result => 
+          result.prediction && result.prediction.is_exoplanet
+        ).length;
+        
+        const dashboardData = {
+          totalSearches: dbStats.total_predictions || results.length,
+          totalPredictions: dbStats.total_predictions || results.length,
+          exoplanetsFound: dbStats.exoplanets_found || exoplanetsFound,
+          modelAccuracy: 0.9137, // Fixed accuracy for pre-trained model
+          lastSearch: results.length > 0 ? results[results.length - 1] : null
         };
         
-        setDashboardData(mockData);
+        setDashboardData(dashboardData);
+        console.log('Dashboard data loaded:', dashboardData);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
+        
+        // Fallback to local calculation
+        const results = searchResults || [];
+        const exoplanetsFound = results.filter(result => 
+          result.prediction && result.prediction.is_exoplanet
+        ).length;
+        
+        setDashboardData({
+          totalSearches: results.length,
+          totalPredictions: results.length,
+          exoplanetsFound: exoplanetsFound,
+          modelAccuracy: 0.9137,
+          lastSearch: results.length > 0 ? results[results.length - 1] : null
+        });
       } finally {
         setIsLoading(false);
       }
@@ -157,14 +183,14 @@ function Dashboard({ currentModel, searchResults }) {
         />
         <StatsCard
           title="Active Model"
-          value="Pre-trained"
+          value="XGBoost"
           icon="🤖"
           color="#4caf50"
           trend="Ready"
         />
         <StatsCard
           title="Exoplanets Found"
-          value="1,247"
+          value={dashboardData.exoplanetsFound}
           icon="🪐"
           color="#ff6b6b"
           trend="+15%"

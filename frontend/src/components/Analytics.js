@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 const AnalyticsContainer = styled.div`
   max-width: 1200px;
@@ -187,32 +187,34 @@ function Analytics({ searchResults, currentModel }) {
       try {
         setIsLoading(true);
         
+        // Handle case when searchResults is empty or undefined
+        const results = searchResults || [];
+        
         // FIXME: Replace with actual API calls
         const mockData = {
-          searchHistory: searchResults.map((result, index) => ({
+          searchHistory: results.map((result, index) => ({
             date: new Date(Date.now() - index * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            dataset: result.dataset,
             exoplanet_id: result.exoplanet_id
           })),
-          datasetUsage: [
-            { name: 'Kepler', searches: searchResults.filter(r => r.dataset === 'kepler').length },
-            { name: 'TESS', searches: searchResults.filter(r => r.dataset === 'tess').length }
-          ],
-          searchDistribution: [
-            { name: 'Kepler', value: searchResults.filter(r => r.dataset === 'kepler').length, color: '#4caf50' },
-            { name: 'TESS', value: searchResults.filter(r => r.dataset === 'tess').length, color: '#4a9eff' }
-          ],
           monthlyStats: {
-            totalSearches: searchResults.length,
-            keplerSearches: searchResults.filter(r => r.dataset === 'kepler').length,
-            tessSearches: searchResults.filter(r => r.dataset === 'tess').length,
-            accuracy: 0.92
+            totalSearches: results.length,
+            keplerSearches: results.length, // All searches are Kepler now
+            accuracy: 0.9137
           }
         };
         
         setAnalyticsData(mockData);
       } catch (error) {
         console.error('Error fetching analytics data:', error);
+        // Set default data on error
+        setAnalyticsData({
+          searchHistory: [],
+          monthlyStats: {
+            totalSearches: 0,
+            keplerSearches: 0,
+            accuracy: 0.9137
+          }
+        });
       } finally {
         setIsLoading(false);
       }
@@ -246,33 +248,29 @@ function Analytics({ searchResults, currentModel }) {
   return (
     <AnalyticsContainer>
       <AnalyticsSection>
-        <SectionTitle>Analytics Dashboard</SectionTitle>
+        <SectionTitle>Kepler Analytics Dashboard</SectionTitle>
         <SectionSubtitle>
-          Comprehensive analysis of model performance and prediction statistics
+          Comprehensive analysis of Kepler model performance and prediction statistics
         </SectionSubtitle>
 
         <StatsGrid>
           <StatCard>
             <StatValue color="#4a9eff">{analyticsData.monthlyStats.totalSearches}</StatValue>
-            <StatLabel>Total Searches</StatLabel>
+            <StatLabel>Total Predictions</StatLabel>
           </StatCard>
           <StatCard>
             <StatValue color="#4caf50">{analyticsData.monthlyStats.keplerSearches}</StatValue>
-            <StatLabel>Kepler Searches</StatLabel>
+            <StatLabel>Kepler Predictions</StatLabel>
           </StatCard>
           <StatCard>
             <StatValue color="#ff9800">{(analyticsData.monthlyStats.accuracy * 100).toFixed(1)}%</StatValue>
             <StatLabel>Model Accuracy</StatLabel>
           </StatCard>
-          <StatCard>
-            <StatValue color="#6bb6ff">{analyticsData.monthlyStats.tessSearches}</StatValue>
-            <StatLabel>TESS Searches</StatLabel>
-          </StatCard>
         </StatsGrid>
 
         <ChartsGrid>
           <ChartCard>
-            <ChartTitle>Search Activity Over Time</ChartTitle>
+            <ChartTitle>Prediction Activity Over Time</ChartTitle>
             <ChartContainer>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={analyticsData.searchHistory}>
@@ -307,10 +305,13 @@ function Analytics({ searchResults, currentModel }) {
           </ChartCard>
 
           <ChartCard>
-            <ChartTitle>Dataset Usage</ChartTitle>
+            <ChartTitle>Kepler Model Performance</ChartTitle>
             <ChartContainer>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={analyticsData.datasetUsage}>
+                <BarChart data={[
+                  { name: 'Accuracy', value: analyticsData.monthlyStats.accuracy * 100, color: '#4caf50' },
+                  { name: 'Predictions', value: analyticsData.monthlyStats.totalSearches, color: '#4a9eff' }
+                ]}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(74, 158, 255, 0.2)" />
                   <XAxis 
                     dataKey="name" 
@@ -329,62 +330,27 @@ function Analytics({ searchResults, currentModel }) {
                       color: 'white'
                     }}
                   />
-                  <Bar dataKey="searches" fill="#4a9eff" />
+                  <Bar dataKey="value" fill="#4a9eff" />
                 </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </ChartCard>
-
-          <ChartCard>
-            <ChartTitle>Search Distribution</ChartTitle>
-            <ChartContainer>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={analyticsData.searchDistribution}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {analyticsData.searchDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'rgba(26, 26, 46, 0.9)',
-                      border: '1px solid rgba(74, 158, 255, 0.3)',
-                      borderRadius: '8px',
-                      color: 'white'
-                    }}
-                  />
-                </PieChart>
               </ResponsiveContainer>
             </ChartContainer>
           </ChartCard>
         </ChartsGrid>
 
         <ModelComparison>
-          <ComparisonTitle>Dataset Usage Summary</ComparisonTitle>
+          <ComparisonTitle>Kepler Model Summary</ComparisonTitle>
           <ComparisonGrid>
-            {analyticsData.datasetUsage.map((dataset, index) => {
-              const isMostUsed = dataset.searches === Math.max(...analyticsData.datasetUsage.map(d => d.searches));
-              return (
-                <ComparisonCard key={index} isBest={isMostUsed}>
-                  {isMostUsed && <BestBadge>Most Used</BestBadge>}
-                  <ModelName>{dataset.name}</ModelName>
-                  <ModelAccuracy isBest={isMostUsed}>
-                    {dataset.searches}
-                  </ModelAccuracy>
-                  <ModelLabel>Searches</ModelLabel>
-                  <div style={{ marginTop: '8px', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                    {dataset.name} dataset
-                  </div>
-                </ComparisonCard>
-              );
-            })}
+            <ComparisonCard isBest={true}>
+              <BestBadge>Active</BestBadge>
+              <ModelName>Kepler Pre-trained Model</ModelName>
+              <ModelAccuracy isBest={true}>
+                {(analyticsData.monthlyStats.accuracy * 100).toFixed(1)}%
+              </ModelAccuracy>
+              <ModelLabel>Accuracy</ModelLabel>
+              <div style={{ marginTop: '8px', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                Kepler dataset predictions
+              </div>
+            </ComparisonCard>
           </ComparisonGrid>
         </ModelComparison>
       </AnalyticsSection>

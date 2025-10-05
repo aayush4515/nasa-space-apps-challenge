@@ -232,32 +232,6 @@ const ExoplanetID = styled.div`
   font-family: 'Space Mono', monospace;
 `;
 
-const ExoplanetData = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-`;
-
-const DataItem = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
-
-const DataLabel = styled.div`
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
-  font-family: 'Space Mono', monospace;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
-`;
-
-const DataValue = styled.div`
-  font-size: 14px;
-  color: white;
-  font-family: 'Space Mono', monospace;
-  font-weight: 700;
-`;
 
 const NoResultsMessage = styled.div`
   text-align: center;
@@ -276,8 +250,8 @@ const LoadingSpinner = styled.div`
   color: #4a9eff;
 `;
 
-function Search() {
-  const [selectedDataset, setSelectedDataset] = useState('kepler');
+function Search({ onSearchResult }) {
+  const selectedDataset = 'kepler'; // Hardcoded to Kepler only
   const [exoplanetId, setExoplanetId] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -291,15 +265,15 @@ function Search() {
     console.log('PredictionService initialized');
   }, []);
 
-  // Load candidate options when dataset changes
+  // Load candidate options on component mount
   useEffect(() => {
     const fetchCandidateOptions = async () => {
       setIsLoadingOptions(true);
       try {
-        const candidates = await PredictionService.getCandidates(selectedDataset);
+        const candidates = await PredictionService.getCandidates();
         setCandidateOptions(candidates);
         setFilteredOptions(candidates);
-        setExoplanetId(''); // Clear selection when switching datasets
+        setExoplanetId(''); // Clear selection
         setSearchQuery(''); // Clear search query
         setShowOptions(false);
       } catch (error) {
@@ -313,7 +287,7 @@ function Search() {
     };
 
     fetchCandidateOptions();
-  }, [selectedDataset]);
+  }, []);
 
   // Filter options based on search query
   useEffect(() => {
@@ -330,14 +304,7 @@ function Search() {
   }, [searchQuery, candidateOptions]);
 
   const getCandidateLabel = () => {
-    switch (selectedDataset) {
-      case 'kepler':
-        return 'KOI Name';
-      case 'tess':
-        return 'TESS Object of Interest';
-      default:
-        return 'Candidate ID';
-    }
+    return 'KOI Name'; // Kepler only
   };
 
   const handleSearchInputChange = (e) => {
@@ -379,19 +346,32 @@ function Search() {
       const result = await PredictionService.makePrediction();
       
       if (result.status === 'success') {
+        console.log('Prediction result:', result);
+        console.log('NASA classification from result:', result.nasa_classification);
+        
         const searchResult = {
           exoplanet_id: exoplanetId,
           dataset: selectedDataset,
+          timestamp: new Date().toISOString(),
           prediction: {
             confidence: result.confidence,
-            score: result.confidence / 100,
+            score: result.confidence / 100, // Convert percentage to decimal for display
             is_exoplanet: result.is_exoplanet,
             model_version: result.model_version
-          }
+          },
+          nasa_classification: result.nasa_classification
         };
         
+        console.log('Search result with NASA classification:', searchResult);
         setSearchResults(searchResult);
-        toast.success(`Prediction complete! ${result.confidence}% confidence this is an exoplanet.`);
+        
+        // Call the parent component to update global state
+        if (onSearchResult) {
+          onSearchResult(searchResult);
+        }
+        
+        const statusText = result.is_exoplanet ? 'is an exoplanet' : 'is not an exoplanet';
+        toast.success(`Prediction complete! ${result.confidence}% confident ${result.exoplanet_id} ${statusText}.`);
       } else {
         toast.error(result.message || 'Prediction failed');
         setSearchResults(null);
@@ -422,26 +402,12 @@ function Search() {
       <SearchSection>
         <SectionTitle>Predict Exoplanet Candidates</SectionTitle>
         <SectionSubtitle>
-          Analyze exoplanet candidates using clean Kepler and TESS datasets with ML predictions. 
-          Search by KOI names (Kepler) or TESS Objects of Interest (TESS).
+          Analyze exoplanet candidates using the clean Kepler dataset with ML predictions. 
+          Search by KOI names from the Kepler mission.
         </SectionSubtitle>
 
         <SearchForm>
           <FormRow>
-            <FormGroup>
-              <Label>Dataset</Label>
-              <Select
-                value={selectedDataset}
-                onChange={(e) => {
-                  setSelectedDataset(e.target.value);
-                  setExoplanetId(''); // Clear selection when switching datasets
-                }}
-              >
-                <option value="kepler">Kepler Dataset (clean_kepler_dataset.csv)</option>
-                <option value="tess">TESS Dataset (clean_tess_dataset.csv)</option>
-              </Select>
-            </FormGroup>
-
             <FormGroup>
               <Label>{getCandidateLabel()}</Label>
               <div style={{ position: 'relative', width: '100%' }}>
@@ -494,17 +460,35 @@ function Search() {
 
         {searchResults && (
           <ResultsSection>
-            <ResultsTitle>Prediction Results</ResultsTitle>
-            
-            <ExoplanetCard>
-              <ExoplanetHeader>
-                <ExoplanetName>
-                  {searchResults.exoplanet_id}
-                </ExoplanetName>
-                <ExoplanetID>
-                  {selectedDataset === 'kepler' ? 'KOI Name' : 'TESS Object of Interest'}: {searchResults.exoplanet_id}
-                </ExoplanetID>
-              </ExoplanetHeader>
+            {/* KOI Name header with left/right layout */}
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '30px',
+              padding: '0 20px'
+            }}>
+              <ExoplanetName style={{ 
+                fontSize: '36px', 
+                fontWeight: '900',
+                margin: 0,
+                textAlign: 'left'
+              }}>
+                {searchResults.exoplanet_id}
+              </ExoplanetName>
+              <ExoplanetID style={{ 
+                fontSize: '16px',
+                color: 'rgba(255, 255, 255, 0.7)',
+                margin: 0
+              }}>
+                {selectedDataset === 'kepler' ? 'KOI Name' : 'TESS Object of Interest'}: {searchResults.exoplanet_id}
+              </ExoplanetID>
+            </div>
+
+            {/* Prediction Results */}
+            <div style={{ marginBottom: '20px' }}>
+              <ExoplanetCard>
+                <ResultsTitle style={{ marginBottom: '16px' }}>Prediction Results</ResultsTitle>
               
               {searchResults.prediction && (
                 <div style={{ 
@@ -516,24 +500,28 @@ function Search() {
                 }}>
                   <div style={{ 
                     display: 'flex', 
-                    justifyContent: 'space-between', 
+                    flexDirection: 'column',
                     alignItems: 'center',
                     marginBottom: '12px' 
                   }}>
                     <div style={{ 
-                      fontSize: '24px', 
-                      fontWeight: '700', 
-                      color: searchResults.prediction.confidence >= 70 ? '#4caf50' : '#ff9800',
-                      fontFamily: 'Orbitron, monospace'
+                      fontSize: '32px', 
+                      fontWeight: '900', 
+                      color: searchResults.prediction.is_exoplanet ? '#4caf50' : '#f44336',
+                      fontFamily: 'Orbitron, monospace',
+                      marginBottom: '8px',
+                      textAlign: 'center'
                     }}>
-                      {searchResults.prediction.confidence}% Confidence
+                      {searchResults.prediction.is_exoplanet ? '🪐 EXOPLANET' : '❌ NOT EXOPLANET'}
                     </div>
                     <div style={{ 
-                      fontSize: '14px', 
-                      color: 'rgba(255, 255, 255, 0.8)',
-                      fontFamily: 'Space Mono, monospace'
+                      fontSize: '18px', 
+                      fontWeight: '600', 
+                      color: searchResults.prediction.is_exoplanet ? '#4caf50' : '#f44336',
+                      fontFamily: 'Space Mono, monospace',
+                      textAlign: 'center'
                     }}>
-                      {searchResults.prediction.is_exoplanet ? 'Exoplanet' : 'Not Exoplanet'}
+                      {searchResults.prediction.confidence}% confident
                     </div>
                   </div>
                   <div style={{ 
@@ -545,7 +533,55 @@ function Search() {
                   </div>
                 </div>
               )}
-            </ExoplanetCard>
+              </ExoplanetCard>
+            </div>
+
+            {/* NASA Classification */}
+            {console.log('Rendering NASA classification section, nasa_classification:', searchResults.nasa_classification)}
+            {searchResults.nasa_classification && (
+              <div style={{ 
+                background: 'rgba(255, 193, 7, 0.1)', 
+                border: '1px solid rgba(255, 193, 7, 0.3)', 
+                borderRadius: '8px', 
+                padding: '16px',
+                marginTop: '20px'
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center'
+                }}>
+                  <div style={{ 
+                    fontSize: '20px', 
+                    fontWeight: '700', 
+                    color: '#ffc107',
+                    fontFamily: 'Orbitron, monospace',
+                    marginBottom: '8px'
+                  }}>
+                    🚀 NASA's Original Classification
+                  </div>
+                  <div style={{ 
+                    fontSize: '24px', 
+                    fontWeight: '900', 
+                    color: searchResults.nasa_classification === 'CONFIRMED' ? '#4caf50' : 
+                           searchResults.nasa_classification === 'CANDIDATE' ? '#ff9800' : '#f44336',
+                    fontFamily: 'Space Mono, monospace',
+                    textAlign: 'center'
+                  }}>
+                    {searchResults.nasa_classification}
+                  </div>
+                  <div style={{ 
+                    fontSize: '12px', 
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    fontFamily: 'Space Mono, monospace',
+                    marginTop: '4px',
+                    textAlign: 'center'
+                  }}>
+                    From original Kepler dataset
+                  </div>
+                </div>
+              </div>
+            )}
           </ResultsSection>
         )}
 

@@ -76,6 +76,12 @@ function QuickActions() {
       description: 'Get ML predictions for exoplanet candidates'
     },
     {
+      to: '/history',
+      icon: '📋',
+      title: 'View History',
+      description: 'View history of tests and predictions'
+    },
+    {
       to: '/analytics',
       icon: '📊',
       title: 'View Analytics',

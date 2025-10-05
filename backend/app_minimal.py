@@ -9,6 +9,7 @@ import pandas as pd
 import os
 import logging
 from ml_models import predict_datapoint
+from database import db
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -17,20 +18,14 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-@app.route('/api/autocomplete/<dataset_name>', methods=['GET'])
-def get_autocomplete_suggestions(dataset_name):
-    """Get autocomplete suggestions for a dataset from text files"""
+@app.route('/api/autocomplete/kepler', methods=['GET'])
+def get_autocomplete_suggestions():
+    """Get autocomplete suggestions for Kepler dataset from text files"""
     try:
-        # Read from text files instead of CSV
-        if dataset_name == 'kepler':
-            options_file = '../Datasets/kepler_options.txt'
-        elif dataset_name == 'tess':
-            options_file = '../Datasets/tess_options.txt'
-        else:
-            return jsonify({'error': 'Invalid dataset name'}), 400
+        options_file = '../Datasets/kepler_options.txt'
         
         if not os.path.exists(options_file):
-            return jsonify({'error': f'{dataset_name} options file not found'}), 400
+            return jsonify({'error': 'Kepler options file not found'}), 400
         
         # Read all options from text file
         with open(options_file, 'r') as f:
@@ -47,13 +42,13 @@ def get_autocomplete_suggestions(dataset_name):
         
         return jsonify({
             'suggestions': suggestions,
-            'dataset': dataset_name,
+            'dataset': 'kepler',
             'total_count': len(suggestions)
         })
         
     except Exception as e:
-        logger.error(f"Error reading {dataset_name} options: {str(e)}")
-        return jsonify({'error': f'Failed to load {dataset_name} options'}), 500
+        logger.error(f"Error reading Kepler options: {str(e)}")
+        return jsonify({'error': 'Failed to load Kepler options'}), 500
 
 @app.route('/api/predict/kepler', methods=['POST'])
 def predict_kepler():
@@ -72,10 +67,20 @@ def predict_kepler():
         
         df = pd.read_csv(csv_path)
         
-        # Since CSV doesn't have ID column, we'll use the first row for now
-        # In a real implementation, you'd need to map KOI names to row indices
-        # For now, let's use the first row as a sample
-        data_point = df.iloc[[0]]  # Get first row as sample
+        # Find the specific row with the matching kepoi_name
+        matching_rows = df[df['kepoi_name'] == koi_name]
+        
+        if matching_rows.empty:
+            return jsonify({'error': f'KOI name {koi_name} not found in dataset'}), 404
+        
+        # Get the first matching row
+        matching_row = matching_rows.iloc[[0]]
+        
+        # Extract NASA classification
+        nasa_classification = matching_row['koi_disposition'].iloc[0]
+        
+        # Skip first two columns (kepoi_name and koi_disposition) and use the rest for prediction
+        data_point = matching_row.drop(['kepoi_name', 'koi_disposition'], axis=1)
         
         # Use ml_models module for prediction
         result = predict_datapoint('kepler', data_point)
@@ -88,7 +93,8 @@ def predict_kepler():
                     'confidence': result['confidence'],
                     'koi_name': koi_name,
                     'model_version': result['model_version']
-                }
+                },
+                'nasa_classification': nasa_classification
             })
         else:
             return jsonify({'error': result['message']}), 500
@@ -97,50 +103,60 @@ def predict_kepler():
         logger.error(f"Kepler prediction error: {str(e)}")
         return jsonify({'error': f'Kepler prediction failed: {str(e)}'}), 500
 
-@app.route('/api/predict/tess', methods=['POST'])
-def predict_tess():
-    """Make prediction for TESS dataset using ml_models module"""
+
+@app.route('/api/predictions', methods=['GET'])
+def get_predictions():
+    """Get all predictions from database"""
+    try:
+        predictions = db.get_all_predictions()
+        return jsonify({
+            'predictions': predictions,
+            'count': len(predictions)
+        })
+    except Exception as e:
+        logger.error(f"Error getting predictions: {str(e)}")
+        return jsonify({'error': 'Failed to get predictions'}), 500
+
+@app.route('/api/predictions/stats', methods=['GET'])
+def get_prediction_stats():
+    """Get prediction statistics"""
+    try:
+        stats = db.get_prediction_stats()
+        return jsonify(stats)
+    except Exception as e:
+        logger.error(f"Error getting stats: {str(e)}")
+        return jsonify({'error': 'Failed to get stats'}), 500
+
+@app.route('/api/predictions/save', methods=['POST'])
+def save_prediction():
+    """Save a prediction to database"""
     try:
         data = request.get_json()
-        toi_name = data.get('toi_name')
         
-        if not toi_name:
-            return jsonify({'error': 'TOI name is required'}), 400
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
         
-        # Load the data point from CSV
-        csv_path = '../Assets/clean_tess_dataset.csv'
-        if not os.path.exists(csv_path):
-            return jsonify({'error': 'TESS dataset not found'}), 400
+        # Validate required fields
+        required_fields = ['exoplanet_id', 'dataset', 'prediction', 'timestamp']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
         
-        df = pd.read_csv(csv_path)
+        # Save to database
+        success = db.save_prediction(data)
         
-        # Since CSV doesn't have ID column, we'll use the first row for now
-        # In a real implementation, you'd need to map TOI names to row indices
-        # For now, let's use the first row as a sample
-        data_point = df.iloc[[0]]  # Get first row as sample
-        
-        # Use ml_models module for prediction
-        result = predict_datapoint('tess', data_point)
-        
-        if result['status'] == 'success':
-            return jsonify({
-                'message': 'TESS prediction completed',
-                'prediction': {
-                    'is_exoplanet': result['is_exoplanet'],
-                    'confidence': result['confidence'],
-                    'toi_name': toi_name,
-                    'model_version': result['model_version']
-                }
-            })
+        if success:
+            return jsonify({'message': 'Prediction saved successfully'})
         else:
-            return jsonify({'error': result['message']}), 500
-        
+            return jsonify({'error': 'Failed to save prediction'}), 500
+            
     except Exception as e:
-        logger.error(f"TESS prediction error: {str(e)}")
-        return jsonify({'error': f'TESS prediction failed: {str(e)}'}), 500
+        logger.error(f"Error saving prediction: {str(e)}")
+        return jsonify({'error': 'Failed to save prediction'}), 500
 
 if __name__ == '__main__':
-    print("🚀 Minimal API server starting...")
-    print("📊 Only 3 endpoints: /api/autocomplete/<dataset>, /api/predict/kepler, /api/predict/tess")
-    print("✨ Much simpler than the original app.py!")
+    print("🚀 Kepler Exoplanet Detection API starting...")
+    print("📊 Endpoints: /api/autocomplete/kepler, /api/predict/kepler")
+    print("💾 Database endpoints: /api/predictions, /api/predictions/stats, /api/predictions/save")
+    print("✨ Kepler-only mode with database persistence enabled!")
     app.run(debug=True, host='0.0.0.0', port=5002)

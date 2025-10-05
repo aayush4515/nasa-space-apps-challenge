@@ -25,15 +25,15 @@ class PredictionService {
    * @param {string} dataset - 'kepler' or 'tess'
    * @returns {Promise<Array>} List of candidate IDs
    */
-  async getCandidates(dataset) {
+  async getCandidates() {
     try {
-      // Call the real API endpoint to get candidates from text files
-      const response = await fetch(`/api/autocomplete/${dataset}`);
+      // Call the Kepler API endpoint to get candidates from text files
+      const response = await fetch('/api/autocomplete/kepler');
       if (response.ok) {
         const data = await response.json();
         return data.suggestions || [];
       } else {
-        throw new Error(`Failed to load ${dataset} candidates`);
+        throw new Error('Failed to load Kepler candidates');
       }
     } catch (error) {
       console.error('Error getting candidates:', error);
@@ -68,36 +68,21 @@ class PredictionService {
    * @returns {Promise<Object>} Prediction results
    */
   async makePrediction() {
-    if (!this.currentDataset || !this.currentCandidate) {
-      throw new Error('No dataset or candidate selected');
+    if (!this.currentCandidate) {
+      throw new Error('No candidate selected');
     }
 
     try {
-      // Call the appropriate API endpoint based on dataset
-      let response;
-      if (this.currentDataset === 'kepler') {
-        response = await fetch('/api/predict/kepler', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            koi_name: this.currentCandidate
-          })
-        });
-      } else if (this.currentDataset === 'tess') {
-        response = await fetch('/api/predict/tess', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            toi_name: this.currentCandidate
-          })
-        });
-      } else {
-        throw new Error('Invalid dataset selected');
-      }
+      // Call Kepler API endpoint
+      const response = await fetch('/api/predict/kepler', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          koi_name: this.currentCandidate
+        })
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -111,9 +96,10 @@ class PredictionService {
           status: 'success',
           dataset: this.currentDataset,
           candidate_id: this.currentCandidate,
-          confidence: Math.round(data.prediction.confidence * 100),
+          confidence: Math.round(data.prediction.confidence * 100 * 100) / 100, // Round to 2 decimal places
           is_exoplanet: data.prediction.is_exoplanet,
           model_version: data.prediction.model_version,
+          nasa_classification: data.nasa_classification || 'UNKNOWN',
           message: data.message || `Prediction completed for ${this.currentCandidate}`
         };
       } else {

@@ -48,8 +48,14 @@ class ExoplanetMLModel:
                     model = pickle.load(f)
                     # Convert data_point to numpy array and reshape
                     data_array = np.array(data_point).reshape(1, 15)
-                    confidence = float(model.predict(data_array)[0])
-                    is_exoplanet = bool(confidence > 0.5)
+                    confidence_array = model.predict_proba(data_array)[0] # 2d array
+                    positive_score = float(confidence_array[1])  # Probability of being exoplanet
+                    negative_score = float(confidence_array[0])  # Probability of not being exoplanet
+                    
+                    # set the confidence and the is_exoplanet boolean
+                    is_exoplanet = positive_score > negative_score
+                    confidence = positive_score if positive_score > negative_score else negative_score
+
                     logger.info(f"Kepler model loaded successfully")
                     logger.info(f"Kepler model confidence: {confidence:.3f}")
                     logger.info(f"Kepler model is_exoplanet: {is_exoplanet}")
