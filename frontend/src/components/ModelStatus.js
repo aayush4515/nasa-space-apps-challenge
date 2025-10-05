@@ -85,7 +85,7 @@ const LastTrainingInfo = styled.div`
 function ModelStatus({ currentModel, accuracy, lastSearch }) {
   const getModelDisplayName = (model) => {
     switch (model) {
-      case 'pretrained': return 'Pre-trained Model';
+      case 'pretrained': return 'XGBoost Model';
       default: return 'Unknown Model';
     }
   };

@@ -115,23 +115,50 @@ const SearchInput = styled.input`
 `;
 
 const FilteredOptions = styled.div`
-  max-height: 200px;
+  max-height: 240px; /* 8 items * 30px each */
   overflow-y: auto;
   border: 1px solid rgba(74, 158, 255, 0.3);
   border-top: none;
   border-radius: 0 0 8px 8px;
   background: rgba(26, 26, 46, 0.95);
   backdrop-filter: blur(10px);
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  
+  /* Custom scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(74, 158, 255, 0.5);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(74, 158, 255, 0.7);
+  }
 `;
 
 const OptionItem = styled.div`
-  padding: 12px 16px;
+  padding: 8px 16px;
   color: white;
   font-family: 'Space Mono', monospace;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
   border-bottom: 1px solid rgba(74, 158, 255, 0.1);
+  height: 30px;
+  display: flex;
+  align-items: center;
   
   &:hover {
     background: rgba(74, 158, 255, 0.2);
@@ -144,11 +171,45 @@ const OptionItem = styled.div`
 `;
 
 const NoOptions = styled.div`
-  padding: 12px 16px;
+  padding: 8px 16px;
   color: rgba(255, 255, 255, 0.6);
   font-family: 'Space Mono', monospace;
-  font-size: 14px;
+  font-size: 12px;
   text-align: center;
+  border-top: 1px solid rgba(74, 158, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+`;
+
+const ScrollIndicator = styled.div`
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(74, 158, 255, 0.6);
+  font-size: 12px;
+  pointer-events: none;
+`;
+
+const ScrollArrows = styled.div`
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  bottom: 8px;
+  width: 20px;
+  pointer-events: none;
+`;
+
+const ScrollArrow = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(74, 158, 255, 0.4);
+  font-size: 12px;
+  opacity: ${props => props.visible ? 1 : 0.3};
+  transition: opacity 0.2s ease;
 `;
 
 
@@ -260,6 +321,8 @@ function Search({ onSearchResult }) {
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [scrollIndex, setScrollIndex] = useState(0);
+  const [dropdownRef, setDropdownRef] = useState(null);
   useEffect(() => {
     // Initialize the service
     console.log('PredictionService initialized');
@@ -297,11 +360,28 @@ function Search({ onSearchResult }) {
       );
       setFilteredOptions(filtered);
       setShowOptions(true);
+      setScrollIndex(0); // Reset scroll when filtering
     } else {
+      // Show all options when no search query
       setFilteredOptions(candidateOptions);
-      setShowOptions(false);
+      setScrollIndex(0); // Reset scroll when clearing
     }
   }, [searchQuery, candidateOptions]);
+
+  // Handle scroll in dropdown
+  const handleScroll = (direction) => {
+    const maxScroll = Math.max(0, filteredOptions.length - 8);
+    if (direction === 'down' && scrollIndex < maxScroll) {
+      setScrollIndex(prev => prev + 1);
+    } else if (direction === 'up' && scrollIndex > 0) {
+      setScrollIndex(prev => prev - 1);
+    }
+  };
+
+  // Get visible options based on scroll position
+  const getVisibleOptions = () => {
+    return filteredOptions.slice(scrollIndex, scrollIndex + 8);
+  };
 
   const getCandidateLabel = () => {
     return 'KOI Name'; // Kepler only
@@ -320,14 +400,51 @@ function Search({ onSearchResult }) {
   };
 
   const handleInputFocus = () => {
-    if (searchQuery.trim()) {
-      setShowOptions(true);
-    }
+    // Always show options when focused, regardless of search query
+    setShowOptions(true);
   };
 
   const handleInputBlur = () => {
     // Delay hiding options to allow for clicks
     setTimeout(() => setShowOptions(false), 200);
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e) => {
+    if (!showOptions) return;
+    
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        handleScroll('down');
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        handleScroll('up');
+        break;
+      case 'Enter':
+        e.preventDefault();
+        const visibleOptions = getVisibleOptions();
+        if (visibleOptions.length > 0) {
+          handleOptionClick(visibleOptions[0]);
+        }
+        break;
+      case 'Escape':
+        setShowOptions(false);
+        break;
+    }
+  };
+
+  // Handle mouse wheel scrolling
+  const handleWheelScroll = (e) => {
+    if (!showOptions) return;
+    
+    e.preventDefault();
+    if (e.deltaY > 0) {
+      handleScroll('down');
+    } else {
+      handleScroll('up');
+    }
   };
 
   const handleSearch = async () => {
@@ -417,27 +534,36 @@ function Search({ onSearchResult }) {
                   onChange={handleSearchInputChange}
                   onFocus={handleInputFocus}
                   onBlur={handleInputBlur}
+                  onKeyDown={handleKeyDown}
                   placeholder={
                     isLoadingOptions 
                       ? 'Loading candidates...' 
-                      : `Search or select a ${getCandidateLabel().toLowerCase()}...`
+                      : `Click to browse or search ${getCandidateLabel().toLowerCase()}s...`
                   }
                   disabled={isLoadingOptions}
                 />
                 {showOptions && filteredOptions.length > 0 && (
-                  <FilteredOptions>
-                    {filteredOptions.slice(0, 20).map((option, index) => (
+                  <FilteredOptions onWheel={handleWheelScroll}>
+                    {getVisibleOptions().map((option, index) => (
                       <OptionItem
-                        key={index}
+                        key={scrollIndex + index}
                         onClick={() => handleOptionClick(option)}
                       >
                         {option}
                       </OptionItem>
                     ))}
-                    {filteredOptions.length > 20 && (
-                      <NoOptions>
-                        Showing first 20 of {filteredOptions.length} results
-                      </NoOptions>
+                    {filteredOptions.length > 8 && (
+                      <>
+                        <ScrollArrows>
+                          <ScrollArrow visible={scrollIndex > 0}>↑</ScrollArrow>
+                          <ScrollArrow visible={scrollIndex < filteredOptions.length - 8}>↓</ScrollArrow>
+                        </ScrollArrows>
+                        <NoOptions>
+                          Showing {scrollIndex + 1}-{Math.min(scrollIndex + 8, filteredOptions.length)} of {filteredOptions.length} results
+                          <br />
+                          <small>Use mouse wheel or arrow keys to scroll</small>
+                        </NoOptions>
+                      </>
                     )}
                   </FilteredOptions>
                 )}
