@@ -28,7 +28,7 @@ A streamlined AI/ML application for detecting exoplanets using NASA space missio
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.9+
+- Python 3.11+
 - Node.js 16+
 - npm or yarn
 
