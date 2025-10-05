@@ -87,6 +87,8 @@ const LoadingSpinner = styled.div`
 `;
 
 function Dashboard({ currentModel, searchResults }) {
+  console.log('Dashboard received searchResults:', searchResults);
+  
   const [dashboardData, setDashboardData] = useState({
     totalSearches: 0,
     totalPredictions: 0,

@@ -58,6 +58,8 @@ const NoActivityMessage = styled.div`
 `;
 
 function RecentActivity({ searchResults }) {
+  console.log('RecentActivity received searchResults:', searchResults);
+  
   const getActivityIcon = (type) => {
     switch (type) {
       case 'search': return '🔮';
@@ -67,13 +69,24 @@ function RecentActivity({ searchResults }) {
   };
 
   const formatTimeAgo = (timestamp) => {
-    // FIXME: Implement proper time formatting
-    return '2 hours ago';
+    if (!timestamp) return 'Just now';
+    
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffInMinutes = Math.floor((now - time) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return `${Math.floor(diffInMinutes / 1440)}d ago`;
   };
+
+  // Handle both single object and array cases
+  const resultsArray = Array.isArray(searchResults) ? searchResults : (searchResults ? [searchResults] : []);
 
   // Combine and sort activities
   const activities = [
-    ...searchResults.map(result => {
+    ...resultsArray.map(result => {
       const isExoplanet = result.prediction?.is_exoplanet;
       const status = isExoplanet ? 'Confirmed' : 'Rejected';
       const dataset = result.dataset === 'kepler' ? 'Kepler' : 'TESS';
