@@ -94,81 +94,6 @@ const StatLabel = styled.div`
   letter-spacing: 0.5px;
 `;
 
-const ModelComparison = styled.div`
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(74, 158, 255, 0.3);
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 24px;
-`;
-
-const ComparisonTitle = styled.h3`
-  font-size: 18px;
-  font-weight: 700;
-  color: #4a9eff;
-  font-family: 'Orbitron', monospace;
-  margin-bottom: 20px;
-  text-align: center;
-`;
-
-const ComparisonGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-`;
-
-const ComparisonCard = styled.div`
-  background: rgba(26, 26, 46, 0.8);
-  border: 1px solid ${props => props.isBest ? 'rgba(76, 175, 80, 0.5)' : 'rgba(74, 158, 255, 0.3)'};
-  border-radius: 8px;
-  padding: 16px;
-  text-align: center;
-  position: relative;
-  
-  ${props => props.isBest && `
-    box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
-  `}
-`;
-
-const ModelName = styled.div`
-  font-size: 16px;
-  font-weight: 700;
-  color: #4a9eff;
-  font-family: 'Orbitron', monospace;
-  margin-bottom: 8px;
-`;
-
-const ModelAccuracy = styled.div`
-  font-size: 24px;
-  font-weight: 900;
-  color: ${props => props.isBest ? '#4caf50' : '#4a9eff'};
-  font-family: 'Orbitron', monospace;
-  margin-bottom: 4px;
-`;
-
-const ModelLabel = styled.div`
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
-  font-family: 'Space Mono', monospace;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-`;
-
-const BestBadge = styled.div`
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  background: linear-gradient(45deg, #4caf50, #66bb6a);
-  color: white;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-family: 'Space Mono', monospace;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-`;
-
 const LoadingSpinner = styled.div`
   display: flex;
   justify-content: center;
@@ -258,14 +183,6 @@ function Analytics({ searchResults, currentModel }) {
             <StatValue color="#4a9eff">{analyticsData.monthlyStats.totalSearches}</StatValue>
             <StatLabel>Total Predictions</StatLabel>
           </StatCard>
-          <StatCard>
-            <StatValue color="#4caf50">{analyticsData.monthlyStats.keplerSearches}</StatValue>
-            <StatLabel>Kepler Predictions</StatLabel>
-          </StatCard>
-          <StatCard>
-            <StatValue color="#ff9800">{(analyticsData.monthlyStats.accuracy * 100).toFixed(1)}%</StatValue>
-            <StatLabel>Model Accuracy</StatLabel>
-          </StatCard>
         </StatsGrid>
 
         <ChartsGrid>
@@ -337,22 +254,6 @@ function Analytics({ searchResults, currentModel }) {
           </ChartCard>
         </ChartsGrid>
 
-        <ModelComparison>
-          <ComparisonTitle>Kepler Model Summary</ComparisonTitle>
-          <ComparisonGrid>
-            <ComparisonCard isBest={true}>
-              <BestBadge>Active</BestBadge>
-              <ModelName>Kepler Pre-trained Model</ModelName>
-              <ModelAccuracy isBest={true}>
-                {(analyticsData.monthlyStats.accuracy * 100).toFixed(1)}%
-              </ModelAccuracy>
-              <ModelLabel>Accuracy</ModelLabel>
-              <div style={{ marginTop: '8px', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                Kepler dataset predictions
-              </div>
-            </ComparisonCard>
-          </ComparisonGrid>
-        </ModelComparison>
       </AnalyticsSection>
     </AnalyticsContainer>
   );
