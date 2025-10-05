@@ -462,24 +462,26 @@ function Search({ onSearchResult }) {
       // Make prediction using direct service
       const result = await PredictionService.makePrediction();
       
-      if (result.status === 'success') {
-        console.log('Prediction result:', result);
-        console.log('NASA classification from result:', result.nasa_classification);
-        
-        const searchResult = {
-          exoplanet_id: exoplanetId,
-          dataset: selectedDataset,
-          timestamp: new Date().toISOString(),
-          prediction: {
-            confidence: result.confidence,
-            score: result.confidence / 100, // Convert percentage to decimal for display
-            is_exoplanet: result.is_exoplanet,
-            model_version: result.model_version
-          },
-          nasa_classification: result.nasa_classification
-        };
-        
-        console.log('Search result with NASA classification:', searchResult);
+              if (result.status === 'success') {
+                console.log('Prediction result:', result);
+                console.log('NASA classification from result:', result.nasa_classification);
+                console.log('Lightcurve data from result:', result.lightcurve);
+                
+                const searchResult = {
+                  exoplanet_id: exoplanetId,
+                  dataset: selectedDataset,
+                  timestamp: new Date().toISOString(),
+                  prediction: {
+                    confidence: result.confidence,
+                    score: result.confidence / 100, // Convert percentage to decimal for display
+                    is_exoplanet: result.is_exoplanet,
+                    model_version: result.model_version
+                  },
+                  nasa_classification: result.nasa_classification,
+                  lightcurve: result.lightcurve
+                };
+                
+                console.log('Search result with NASA classification and lightcurve:', searchResult);
         setSearchResults(searchResult);
         
         // Call the parent component to update global state
@@ -705,6 +707,102 @@ function Search({ onSearchResult }) {
                   }}>
                     From original Kepler dataset
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Lightcurve Display */}
+            {searchResults.lightcurve && searchResults.lightcurve.generated && (
+              <div style={{ 
+                background: 'rgba(74, 158, 255, 0.1)', 
+                border: '1px solid rgba(74, 158, 255, 0.3)', 
+                borderRadius: '8px', 
+                padding: '20px',
+                marginTop: '20px'
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center'
+                }}>
+                  <div style={{ 
+                    fontSize: '20px', 
+                    fontWeight: '700', 
+                    color: '#4a9eff',
+                    fontFamily: 'Orbitron, monospace',
+                    marginBottom: '16px'
+                  }}>
+                    📈 Lightcurve
+                  </div>
+                  <div style={{ 
+                    maxWidth: '100%',
+                    textAlign: 'center'
+                  }}>
+                    <img 
+                      src={`http://localhost:5002/api/lightcurve/${searchResults.lightcurve.filename}`}
+                      alt="Lightcurve"
+                      style={{
+                        maxWidth: '100%',
+                        height: 'auto',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(74, 158, 255, 0.3)',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                      }}
+                      onLoad={() => console.log('Lightcurve image loaded successfully')}
+                      onError={(e) => {
+                        console.error('Lightcurve image failed to load:', e.target.src);
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                    <div style={{ 
+                      display: 'none',
+                      color: 'rgba(255, 255, 255, 0.6)',
+                      fontFamily: 'Space Mono, monospace',
+                      fontSize: '14px',
+                      marginTop: '8px'
+                    }}>
+                      Lightcurve image failed to load
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Debug: Show lightcurve data even if not generated */}
+            {searchResults.lightcurve && !searchResults.lightcurve.generated && (
+              <div style={{ 
+                background: 'rgba(255, 193, 7, 0.1)', 
+                border: '1px solid rgba(255, 193, 7, 0.3)', 
+                borderRadius: '8px', 
+                padding: '20px',
+                marginTop: '20px'
+              }}>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#ffc107',
+                  fontFamily: 'Space Mono, monospace'
+                }}>
+                  ⚠️ Lightcurve generation failed: {searchResults.lightcurve.error || 'Unknown error'}
+                </div>
+              </div>
+            )}
+
+            {/* Debug: Show if no lightcurve data at all */}
+            {!searchResults.lightcurve && (
+              <div style={{ 
+                background: 'rgba(255, 0, 0, 0.1)', 
+                border: '1px solid rgba(255, 0, 0, 0.3)', 
+                borderRadius: '8px', 
+                padding: '20px',
+                marginTop: '20px'
+              }}>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#f44336',
+                  fontFamily: 'Space Mono, monospace'
+                }}>
+                  ❌ No lightcurve data received from backend
                 </div>
               </div>
             )}

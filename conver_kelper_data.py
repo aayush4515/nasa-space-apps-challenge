@@ -11,6 +11,7 @@ import csv
 selected_features = [
     "kepoi_name",
     "koi_disposition",
+    "kepid",
     "koi_period",
     "koi_time0bk",
     "koi_duration",

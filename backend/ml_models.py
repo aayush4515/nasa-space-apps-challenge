@@ -40,6 +40,7 @@ class ExoplanetMLModel:
             logger.info(f"Making prediction for {dataset_name} dataset using pre-trained model")
             logger.info(f"Data point shape: {data_point.shape}")
             logger.info(f"Data point columns: {list(data_point.columns)}")
+            logger.info(f"Data point array shape before reshape: {np.array(data_point).shape}")
 
             if dataset_name == 'kepler':
                 # Load and use actual pre-trained Kepler model

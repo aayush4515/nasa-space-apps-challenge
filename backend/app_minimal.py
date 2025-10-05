@@ -3,13 +3,14 @@ Minimal Flask API for NASA Exoplanet Detection
 Only essential endpoints - no complex routing
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import pandas as pd
 import os
 import logging
 from ml_models import predict_datapoint
 from database import db
+from lightcurve_generator import generate_lightcurve
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -79,14 +80,17 @@ def predict_kepler():
         # Extract NASA classification
         nasa_classification = matching_row['koi_disposition'].iloc[0]
         
-        # Skip first two columns (kepoi_name and koi_disposition) and use the rest for prediction
-        data_point = matching_row.drop(['kepoi_name', 'koi_disposition'], axis=1)
+        # Skip first three columns (kepoi_name, koi_disposition, and kepid) and use the rest for prediction
+        data_point = matching_row.drop(['kepoi_name', 'koi_disposition', 'kepid'], axis=1)
         
         # Use ml_models module for prediction
         result = predict_datapoint('kepler', data_point)
         
         if result['status'] == 'success':
-            return jsonify({
+            # Generate lightcurve
+            lightcurve_success, lightcurve_path = generate_lightcurve(koi_name)
+            
+            response_data = {
                 'message': 'Kepler prediction completed',
                 'prediction': {
                     'is_exoplanet': result['is_exoplanet'],
@@ -95,7 +99,22 @@ def predict_kepler():
                     'model_version': result['model_version']
                 },
                 'nasa_classification': nasa_classification
-            })
+            }
+            
+            # Add lightcurve info if successful
+            if lightcurve_success and lightcurve_path:
+                response_data['lightcurve'] = {
+                    'generated': True,
+                    'filename': os.path.basename(lightcurve_path),
+                    'title': f"Lightcurve for {koi_name}"
+                }
+            else:
+                response_data['lightcurve'] = {
+                    'generated': False,
+                    'error': 'Failed to generate lightcurve'
+                }
+            
+            return jsonify(response_data)
         else:
             return jsonify({'error': result['message']}), 500
         
@@ -153,6 +172,19 @@ def save_prediction():
     except Exception as e:
         logger.error(f"Error saving prediction: {str(e)}")
         return jsonify({'error': 'Failed to save prediction'}), 500
+
+@app.route('/api/lightcurve/<filename>', methods=['GET'])
+def get_lightcurve(filename):
+    """Serve lightcurve images"""
+    try:
+        lightcurve_path = os.path.join('lightcurves', filename)
+        if os.path.exists(lightcurve_path):
+            return send_file(lightcurve_path, mimetype='image/png')
+        else:
+            return jsonify({'error': 'Lightcurve not found'}), 404
+    except Exception as e:
+        logger.error(f"Error serving lightcurve {filename}: {str(e)}")
+        return jsonify({'error': 'Failed to serve lightcurve'}), 500
 
 if __name__ == '__main__':
     print("🚀 Kepler Exoplanet Detection API starting...")

@@ -100,6 +100,7 @@ class PredictionService {
           is_exoplanet: data.prediction.is_exoplanet,
           model_version: data.prediction.model_version,
           nasa_classification: data.nasa_classification || 'UNKNOWN',
+          lightcurve: data.lightcurve || null,
           message: data.message || `Prediction completed for ${this.currentCandidate}`
         };
       } else {
