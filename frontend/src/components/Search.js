@@ -302,6 +302,14 @@ const NoResultsMessage = styled.div`
   font-size: 16px;
 `;
 
+// Add CSS animation for loading spinner
+const SpinnerStyle = styled.div`
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+
 const LoadingSpinner = styled.div`
   display: flex;
   justify-content: center;
@@ -316,6 +324,9 @@ function Search({ onSearchResult }) {
   const [exoplanetId, setExoplanetId] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [lightcurveData, setLightcurveData] = useState(null);
+  const [isGeneratingLightcurve, setIsGeneratingLightcurve] = useState(false);
+  const [lightcurveError, setLightcurveError] = useState(null);
   const [candidateOptions, setCandidateOptions] = useState([]);
   const [filteredOptions, setFilteredOptions] = useState([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
@@ -447,6 +458,34 @@ function Search({ onSearchResult }) {
     }
   };
 
+  const handleLightcurveGeneration = async () => {
+    if (!searchResults) {
+      toast.error('Please make a prediction first');
+      return;
+    }
+
+    setIsGeneratingLightcurve(true);
+    setLightcurveError(null);
+
+    try {
+      const result = await PredictionService.generateLightcurve();
+      
+      if (result.status === 'success') {
+        setLightcurveData(result);
+        toast.success('Lightcurve generated successfully!');
+      } else {
+        setLightcurveError(result.message);
+        toast.error(result.message);
+      }
+    } catch (error) {
+      console.error('Lightcurve generation error:', error);
+      setLightcurveError('Failed to generate lightcurve');
+      toast.error('Failed to generate lightcurve');
+    } finally {
+      setIsGeneratingLightcurve(false);
+    }
+  };
+
   const handleSearch = async () => {
     if (!exoplanetId.trim()) {
       toast.error('Please enter a candidate ID');
@@ -454,6 +493,8 @@ function Search({ onSearchResult }) {
     }
 
     setIsSearching(true);
+    setLightcurveData(null);
+    setLightcurveError(null);
 
     try {
       // Set selection in the service
@@ -711,8 +752,8 @@ function Search({ onSearchResult }) {
               </div>
             )}
 
-            {/* Lightcurve Display */}
-            {searchResults.lightcurve && searchResults.lightcurve.generated && (
+            {/* Lightcurve Dropdown */}
+            {searchResults && (
               <div style={{ 
                 background: 'rgba(74, 158, 255, 0.1)', 
                 border: '1px solid rgba(74, 158, 255, 0.3)', 
@@ -734,78 +775,111 @@ function Search({ onSearchResult }) {
                   }}>
                     📈 Lightcurve
                   </div>
-                  <div style={{ 
-                    maxWidth: '100%',
-                    textAlign: 'center'
-                  }}>
-                    <img 
-                      src={`http://localhost:5002/api/lightcurve/${searchResults.lightcurve.filename}`}
-                      alt="Lightcurve"
+                  
+                  {!lightcurveData && !isGeneratingLightcurve && !lightcurveError && (
+                    <button
+                      onClick={handleLightcurveGeneration}
                       style={{
-                        maxWidth: '100%',
-                        height: 'auto',
+                        background: 'linear-gradient(135deg, #4a9eff 0%, #6bb6ff 100%)',
+                        border: 'none',
                         borderRadius: '8px',
-                        border: '1px solid rgba(74, 158, 255, 0.3)',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                        padding: '12px 24px',
+                        color: 'white',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        fontFamily: 'Space Mono, monospace',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        boxShadow: '0 4px 12px rgba(74, 158, 255, 0.3)'
                       }}
-                      onLoad={() => console.log('Lightcurve image loaded successfully')}
-                      onError={(e) => {
-                        console.error('Lightcurve image failed to load:', e.target.src);
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'block';
+                      onMouseOver={(e) => {
+                        e.target.style.transform = 'translateY(-2px)';
+                        e.target.style.boxShadow = '0 6px 16px rgba(74, 158, 255, 0.4)';
                       }}
-                    />
+                      onMouseOut={(e) => {
+                        e.target.style.transform = 'translateY(0)';
+                        e.target.style.boxShadow = '0 4px 12px rgba(74, 158, 255, 0.3)';
+                      }}
+                    >
+                      Generate Lightcurve
+                    </button>
+                  )}
+
+                  {isGeneratingLightcurve && (
                     <div style={{ 
-                      display: 'none',
-                      color: 'rgba(255, 255, 255, 0.6)',
+                      display: 'flex', 
+                      alignItems: 'center',
+                      color: '#4a9eff',
+                      fontFamily: 'Space Mono, monospace',
+                      fontSize: '16px'
+                    }}>
+                      <div style={{ 
+                        width: '20px', 
+                        height: '20px', 
+                        border: '2px solid #4a9eff',
+                        borderTop: '2px solid transparent',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        marginRight: '12px'
+                      }}></div>
+                      Generating lightcurve...
+                    </div>
+                  )}
+
+                  {lightcurveError && (
+                    <div style={{ 
+                      color: '#f44336',
                       fontFamily: 'Space Mono, monospace',
                       fontSize: '14px',
+                      textAlign: 'center',
+                      padding: '12px',
+                      background: 'rgba(244, 67, 54, 0.1)',
+                      border: '1px solid rgba(244, 67, 54, 0.3)',
+                      borderRadius: '8px',
                       marginTop: '8px'
                     }}>
-                      Lightcurve image failed to load
+                      ❌ {lightcurveError}
                     </div>
-                  </div>
+                  )}
+
+                  {lightcurveData && lightcurveData.status === 'success' && (
+                    <div style={{ 
+                      maxWidth: '100%',
+                      textAlign: 'center',
+                      marginTop: '16px'
+                    }}>
+                      <img 
+                        src={`http://localhost:5002${lightcurveData.url}`}
+                        alt="Lightcurve"
+                        style={{
+                          maxWidth: '100%',
+                          height: 'auto',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(74, 158, 255, 0.3)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                        }}
+                        onLoad={() => console.log('Lightcurve image loaded successfully')}
+                        onError={(e) => {
+                          console.error('Lightcurve image failed to load:', e.target.src);
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'block';
+                        }}
+                      />
+                      <div style={{ 
+                        display: 'none',
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        fontFamily: 'Space Mono, monospace',
+                        fontSize: '14px',
+                        marginTop: '8px'
+                      }}>
+                        Lightcurve image failed to load
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Debug: Show lightcurve data even if not generated */}
-            {searchResults.lightcurve && !searchResults.lightcurve.generated && (
-              <div style={{ 
-                background: 'rgba(255, 193, 7, 0.1)', 
-                border: '1px solid rgba(255, 193, 7, 0.3)', 
-                borderRadius: '8px', 
-                padding: '20px',
-                marginTop: '20px'
-              }}>
-                <div style={{ 
-                  fontSize: '16px', 
-                  color: '#ffc107',
-                  fontFamily: 'Space Mono, monospace'
-                }}>
-                  ⚠️ Lightcurve generation failed: {searchResults.lightcurve.error || 'Unknown error'}
-                </div>
-              </div>
-            )}
-
-            {/* Debug: Show if no lightcurve data at all */}
-            {!searchResults.lightcurve && (
-              <div style={{ 
-                background: 'rgba(255, 0, 0, 0.1)', 
-                border: '1px solid rgba(255, 0, 0, 0.3)', 
-                borderRadius: '8px', 
-                padding: '20px',
-                marginTop: '20px'
-              }}>
-                <div style={{ 
-                  fontSize: '16px', 
-                  color: '#f44336',
-                  fontFamily: 'Space Mono, monospace'
-                }}>
-                  ❌ No lightcurve data received from backend
-                </div>
-              </div>
-            )}
           </ResultsSection>
         )}
 

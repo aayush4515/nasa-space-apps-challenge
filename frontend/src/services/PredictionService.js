@@ -100,7 +100,6 @@ class PredictionService {
           is_exoplanet: data.prediction.is_exoplanet,
           model_version: data.prediction.model_version,
           nasa_classification: data.nasa_classification || 'UNKNOWN',
-          lightcurve: data.lightcurve || null,
           message: data.message || `Prediction completed for ${this.currentCandidate}`
         };
       } else {
@@ -123,6 +122,51 @@ class PredictionService {
       dataset: this.currentDataset,
       candidate: this.currentCandidate
     };
+  }
+
+  /**
+   * Generate lightcurve for the current selection
+   * @returns {Promise<Object>} Lightcurve generation results
+   */
+  async generateLightcurve() {
+    if (!this.currentCandidate) {
+      throw new Error('No candidate selected');
+    }
+
+    try {
+      const response = await fetch('/api/lightcurve/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          koi_name: this.currentCandidate
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Lightcurve generation failed');
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        return {
+          status: 'success',
+          filename: data.filename,
+          title: data.title,
+          url: data.url
+        };
+      } else {
+        throw new Error(data.error || 'Lightcurve generation failed');
+      }
+    } catch (error) {
+      return {
+        status: 'error',
+        message: `Lightcurve generation failed: ${error.message}`
+      };
+    }
   }
 
   /**

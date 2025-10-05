@@ -87,9 +87,6 @@ def predict_kepler():
         result = predict_datapoint('kepler', data_point)
         
         if result['status'] == 'success':
-            # Generate lightcurve
-            lightcurve_success, lightcurve_path = generate_lightcurve(koi_name)
-            
             response_data = {
                 'message': 'Kepler prediction completed',
                 'prediction': {
@@ -100,19 +97,6 @@ def predict_kepler():
                 },
                 'nasa_classification': nasa_classification
             }
-            
-            # Add lightcurve info if successful
-            if lightcurve_success and lightcurve_path:
-                response_data['lightcurve'] = {
-                    'generated': True,
-                    'filename': os.path.basename(lightcurve_path),
-                    'title': f"Lightcurve for {koi_name}"
-                }
-            else:
-                response_data['lightcurve'] = {
-                    'generated': False,
-                    'error': 'Failed to generate lightcurve'
-                }
             
             return jsonify(response_data)
         else:
@@ -172,6 +156,36 @@ def save_prediction():
     except Exception as e:
         logger.error(f"Error saving prediction: {str(e)}")
         return jsonify({'error': 'Failed to save prediction'}), 500
+
+@app.route('/api/lightcurve/generate', methods=['POST'])
+def generate_lightcurve_endpoint():
+    """Generate lightcurve for a specific KOI name"""
+    try:
+        data = request.get_json()
+        koi_name = data.get('koi_name')
+
+        if not koi_name:
+            return jsonify({'error': 'KOI name is required'}), 400
+
+        # Generate lightcurve
+        lightcurve_success, lightcurve_path = generate_lightcurve(koi_name)
+        
+        if lightcurve_success and lightcurve_path:
+            return jsonify({
+                'success': True,
+                'filename': os.path.basename(lightcurve_path),
+                'title': f"Lightcurve for {koi_name}",
+                'url': f"/api/lightcurve/{os.path.basename(lightcurve_path)}"
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to generate lightcurve'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error generating lightcurve: {str(e)}")
+        return jsonify({'error': f'Lightcurve generation failed: {str(e)}'}), 500
 
 @app.route('/api/lightcurve/<filename>', methods=['GET'])
 def get_lightcurve(filename):
