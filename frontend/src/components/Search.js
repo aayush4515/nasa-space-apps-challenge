@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { toast } from 'react-toastify';
-import axios from 'axios';
+import PredictionService from '../services/PredictionService';
 
 const SearchContainer = styled.div`
   max-width: 1000px;
@@ -287,18 +287,8 @@ function Search() {
   const [showOptions, setShowOptions] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   useEffect(() => {
-    // Fetch available datasets
-    const fetchDatasets = async () => {
-      try {
-        const response = await axios.get('/api/datasets');
-        console.log('Available datasets:', response.data.datasets);
-      } catch (error) {
-        console.error('Error fetching datasets:', error);
-        toast.error('Failed to load datasets');
-      }
-    };
-
-    fetchDatasets();
+    // Initialize the service
+    console.log('PredictionService initialized');
   }, []);
 
   // Load candidate options when dataset changes
@@ -306,9 +296,9 @@ function Search() {
     const fetchCandidateOptions = async () => {
       setIsLoadingOptions(true);
       try {
-        const response = await axios.get(`/api/autocomplete/${selectedDataset}`);
-        setCandidateOptions(response.data.suggestions);
-        setFilteredOptions(response.data.suggestions);
+        const candidates = await PredictionService.getCandidates(selectedDataset);
+        setCandidateOptions(candidates);
+        setFilteredOptions(candidates);
         setExoplanetId(''); // Clear selection when switching datasets
         setSearchQuery(''); // Clear search query
         setShowOptions(false);
@@ -382,47 +372,34 @@ function Search() {
     setIsSearching(true);
 
     try {
-      let predictionResponse;
+      // Set selection in the service
+      PredictionService.setSelection(selectedDataset, exoplanetId);
       
-      // Call the appropriate API based on dataset
-      if (selectedDataset === 'kepler') {
-        predictionResponse = await axios.post('/api/predict/kepler', {
-          koi_name: exoplanetId
-        });
-      } else if (selectedDataset === 'tess') {
-        predictionResponse = await axios.post('/api/predict/tess', {
-          toi_name: exoplanetId
-        });
-      } else {
-        throw new Error('Invalid dataset selected');
-      }
-
-      if (predictionResponse.data) {
-        const prediction = predictionResponse.data.prediction;
-        const confidence = Math.round(prediction.confidence * 100);
-        
-        const result = {
+      // Make prediction using direct service
+      const result = await PredictionService.makePrediction();
+      
+      if (result.status === 'success') {
+        const searchResult = {
           exoplanet_id: exoplanetId,
           dataset: selectedDataset,
           prediction: {
-            confidence: confidence,
-            score: prediction.confidence,
-            is_exoplanet: prediction.is_exoplanet,
-            model_version: prediction.model_version
+            confidence: result.confidence,
+            score: result.confidence / 100,
+            is_exoplanet: result.is_exoplanet,
+            model_version: result.model_version
           }
         };
         
-        setSearchResults(result);
-        toast.success(`Prediction complete! ${confidence}% confidence this is an exoplanet.`);
+        setSearchResults(searchResult);
+        toast.success(`Prediction complete! ${result.confidence}% confidence this is an exoplanet.`);
+      } else {
+        toast.error(result.message || 'Prediction failed');
+        setSearchResults(null);
       }
     } catch (error) {
       console.error('Prediction error:', error);
-      if (error.response?.status === 404) {
-        toast.error('Candidate not found in dataset');
-        setSearchResults(null);
-      } else {
-        toast.error('Prediction failed. Please try again.');
-      }
+      toast.error('Prediction failed. Please try again.');
+      setSearchResults(null);
     } finally {
       setIsSearching(false);
     }
@@ -434,7 +411,7 @@ function Search() {
       <SearchContainer>
         <LoadingSpinner>
           <div className="loading"></div>
-          <span style={{ marginLeft: '12px' }}>Searching...</span>
+          <span style={{ marginLeft: '12px' }}>Predicting...</span>
         </LoadingSpinner>
       </SearchContainer>
     );

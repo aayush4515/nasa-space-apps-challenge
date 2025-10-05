@@ -12,6 +12,7 @@ dist/
 
 # Python venv
 venv/
+venv_old/
 
 # Env files
 .env

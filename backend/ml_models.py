@@ -42,13 +42,14 @@ class ExoplanetMLModel:
             logger.info(f"Data point columns: {list(data_point.columns)}")
 
             if dataset_name == 'kepler':
-                # FIXME: Load and use actual pre-trained Kepler model
+                # Load and use actual pre-trained Kepler model
                 # Load model from .pkl file
-                with open("/backend/models/koi_xgb.pkl", "rb") as f:
+                with open("models/koi_xgb.pkl", "rb") as f:
                     model = pickle.load(f)
-                    new_point = np.array(new_point).reshape(1, -1)
-                    confidence = model.predict_proba(data_point)
-                    is_exoplanet = confidence > 0.5
+                    # Convert data_point to numpy array and reshape
+                    data_array = np.array(data_point).reshape(1, 15)
+                    confidence = float(model.predict(data_array)[0])
+                    is_exoplanet = bool(confidence > 0.5)
                     logger.info(f"Kepler model loaded successfully")
                     logger.info(f"Kepler model confidence: {confidence:.3f}")
                     logger.info(f"Kepler model is_exoplanet: {is_exoplanet}")
