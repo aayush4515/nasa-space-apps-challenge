@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import DatabaseService from '../services/DatabaseService';
 
 const AnalyticsContainer = styled.div`
   max-width: 1200px;
@@ -37,7 +38,7 @@ const SectionSubtitle = styled.p`
 
 const ChartsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 24px;
   margin-bottom: 40px;
 `;
@@ -103,42 +104,119 @@ const LoadingSpinner = styled.div`
   color: #4a9eff;
 `;
 
+const RefreshButton = styled.button`
+  background: rgba(74, 158, 255, 0.2);
+  border: 1px solid rgba(74, 158, 255, 0.5);
+  color: #4a9eff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: rgba(74, 158, 255, 0.3);
+    border-color: rgba(74, 158, 255, 0.7);
+  }
+`;
+
+const LastUpdated = styled.div`
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: 'Space Mono', monospace;
+  text-align: center;
+  margin-top: 20px;
+`;
+
 function Analytics({ searchResults, currentModel }) {
   const [analyticsData, setAnalyticsData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
 
   useEffect(() => {
     const fetchAnalyticsData = async () => {
       try {
         setIsLoading(true);
         
-        // Handle case when searchResults is empty or undefined
-        const results = searchResults || [];
+        // Use the same data source as Dashboard - get stats from database
+        const dbStats = await DatabaseService.loadStats();
+        const dbData = await DatabaseService.loadAllData();
+        const dbPredictions = dbData.predictions || [];
         
-        // FIXME: Replace with actual API calls
-        const mockData = {
-          searchHistory: results.map((result, index) => ({
-            date: new Date(Date.now() - index * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        // Use database stats for accurate totals (same as Dashboard)
+        const totalPredictions = dbStats.total_predictions || 0;
+        const exoplanetsFound = dbStats.exoplanets_found || 0;
+        const nonExoplanets = totalPredictions - exoplanetsFound;
+        
+        // Calculate confidence score distribution from database predictions
+        const confidenceRanges = {
+          '0-20%': 0,
+          '21-40%': 0,
+          '41-60%': 0,
+          '61-80%': 0,
+          '81-100%': 0
+        };
+        
+        dbPredictions.forEach(pred => {
+          const confidence = pred.prediction?.confidence || 0;
+          if (confidence <= 20) confidenceRanges['0-20%']++;
+          else if (confidence <= 40) confidenceRanges['21-40%']++;
+          else if (confidence <= 60) confidenceRanges['41-60%']++;
+          else if (confidence <= 80) confidenceRanges['61-80%']++;
+          else confidenceRanges['81-100%']++;
+        });
+        
+        const confidenceData = Object.entries(confidenceRanges).map(([range, count]) => ({
+          range,
+          count,
+          percentage: totalPredictions > 0 ? Math.round((count / totalPredictions) * 100) : 0
+        }));
+        
+        const analyticsData = {
+          searchHistory: dbPredictions.map((result, index) => ({
+            date: new Date(result.timestamp || Date.now() - index * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             exoplanet_id: result.exoplanet_id
           })),
           monthlyStats: {
-            totalSearches: results.length,
-            keplerSearches: results.length, // All searches are Kepler now
-            accuracy: 0.9137
-          }
+            totalSearches: totalPredictions,
+            keplerSearches: totalPredictions,
+            accuracy: 0.9117
+          },
+          exoplanetDiscovery: [
+            { name: 'Exoplanets Found', value: exoplanetsFound, color: '#4caf50' },
+            { name: 'Non-Exoplanets', value: nonExoplanets, color: '#f44336' }
+          ],
+          confidenceDistribution: confidenceData
         };
         
-        setAnalyticsData(mockData);
+        setAnalyticsData(analyticsData);
       } catch (error) {
         console.error('Error fetching analytics data:', error);
-        // Set default data on error
+        
+        // Fallback to local calculation (same as Dashboard)
+        const results = searchResults || [];
+        const exoplanetsFound = results.filter(result => 
+          result.prediction && result.prediction.is_exoplanet
+        ).length;
+        const totalPredictions = results.length;
+        const nonExoplanets = totalPredictions - exoplanetsFound;
+        
         setAnalyticsData({
-          searchHistory: [],
+          searchHistory: results.map((result, index) => ({
+            date: new Date(result.timestamp || Date.now() - index * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            exoplanet_id: result.exoplanet_id
+          })),
           monthlyStats: {
-            totalSearches: 0,
-            keplerSearches: 0,
-            accuracy: 0.9137
-          }
+            totalSearches: totalPredictions,
+            keplerSearches: totalPredictions,
+            accuracy: 0.9117
+          },
+          exoplanetDiscovery: [
+            { name: 'Exoplanets Found', value: exoplanetsFound, color: '#4caf50' },
+            { name: 'Non-Exoplanets', value: nonExoplanets, color: '#f44336' }
+          ],
+          confidenceDistribution: []
         });
       } finally {
         setIsLoading(false);
@@ -146,7 +224,28 @@ function Analytics({ searchResults, currentModel }) {
     };
 
     fetchAnalyticsData();
-  }, [searchResults]);
+  }, [searchResults, lastUpdate]);
+
+  // Auto-refresh every 30 seconds to catch new predictions
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLastUpdate(Date.now());
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Listen for storage events to detect new predictions from other tabs
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'predictions' || e.key === 'searchResults') {
+        setLastUpdate(Date.now());
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   if (isLoading) {
     return (
@@ -177,15 +276,126 @@ function Analytics({ searchResults, currentModel }) {
         <SectionSubtitle>
           Comprehensive analysis of Kepler model performance and prediction statistics
         </SectionSubtitle>
+        
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <RefreshButton onClick={() => setLastUpdate(Date.now())}>
+            🔄 Refresh Data
+          </RefreshButton>
+        </div>
 
         <StatsGrid>
           <StatCard>
             <StatValue color="#4a9eff">{analyticsData.monthlyStats.totalSearches}</StatValue>
             <StatLabel>Total Predictions</StatLabel>
           </StatCard>
+          <StatCard>
+            <StatValue color="#4caf50">{analyticsData.exoplanetDiscovery[0]?.value || 0}</StatValue>
+            <StatLabel>Exoplanets Found</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue color="#f44336">{analyticsData.exoplanetDiscovery[1]?.value || 0}</StatValue>
+            <StatLabel>Non-Exoplanets</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue color="#ff9800">
+              {analyticsData.monthlyStats.totalSearches > 0 
+                ? Math.round((analyticsData.exoplanetDiscovery[0]?.value / analyticsData.monthlyStats.totalSearches) * 100) 
+                : 0}%
+            </StatValue>
+            <StatLabel>Discovery Rate</StatLabel>
+          </StatCard>
         </StatsGrid>
 
         <ChartsGrid>
+          <ChartCard>
+            <ChartTitle>Exoplanet Discovery Distribution</ChartTitle>
+            <ChartContainer>
+              {analyticsData.exoplanetDiscovery.some(item => item.value > 0) ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={analyticsData.exoplanetDiscovery}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(1)}%)`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {analyticsData.exoplanetDiscovery.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: 'rgba(26, 26, 46, 0.9)',
+                        border: '1px solid rgba(74, 158, 255, 0.3)',
+                        borderRadius: '8px',
+                        color: 'white'
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  height: '100%', 
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  fontFamily: 'Space Mono, monospace'
+                }}>
+                  No prediction data available
+                </div>
+              )}
+            </ChartContainer>
+          </ChartCard>
+
+          <ChartCard>
+            <ChartTitle>Confidence Score Distribution</ChartTitle>
+            <ChartContainer>
+              {analyticsData.confidenceDistribution.some(item => item.count > 0) ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={analyticsData.confidenceDistribution}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(74, 158, 255, 0.2)" />
+                    <XAxis 
+                      dataKey="range" 
+                      stroke="rgba(255, 255, 255, 0.6)"
+                      fontSize={12}
+                    />
+                    <YAxis 
+                      stroke="rgba(255, 255, 255, 0.6)"
+                      fontSize={12}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: 'rgba(26, 26, 46, 0.9)',
+                        border: '1px solid rgba(74, 158, 255, 0.3)',
+                        borderRadius: '8px',
+                        color: 'white'
+                      }}
+                      formatter={(value, name) => [value, 'Predictions']}
+                      labelFormatter={(label) => `Confidence Range: ${label}`}
+                    />
+                    <Bar dataKey="count" fill="#4a9eff" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  height: '100%', 
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  fontFamily: 'Space Mono, monospace'
+                }}>
+                  No prediction data available
+                </div>
+              )}
+            </ChartContainer>
+          </ChartCard>
+
           <ChartCard>
             <ChartTitle>Prediction Activity Over Time</ChartTitle>
             <ChartContainer>
@@ -221,38 +431,11 @@ function Analytics({ searchResults, currentModel }) {
             </ChartContainer>
           </ChartCard>
 
-          <ChartCard>
-            <ChartTitle>Kepler Model Performance</ChartTitle>
-            <ChartContainer>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={[
-                  { name: 'Accuracy', value: analyticsData.monthlyStats.accuracy * 100, color: '#4caf50' },
-                  { name: 'Predictions', value: analyticsData.monthlyStats.totalSearches, color: '#4a9eff' }
-                ]}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(74, 158, 255, 0.2)" />
-                  <XAxis 
-                    dataKey="name" 
-                    stroke="rgba(255, 255, 255, 0.6)"
-                    fontSize={12}
-                  />
-                  <YAxis 
-                    stroke="rgba(255, 255, 255, 0.6)"
-                    fontSize={12}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'rgba(26, 26, 46, 0.9)',
-                      border: '1px solid rgba(74, 158, 255, 0.3)',
-                      borderRadius: '8px',
-                      color: 'white'
-                    }}
-                  />
-                  <Bar dataKey="value" fill="#4a9eff" />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </ChartCard>
         </ChartsGrid>
+
+        <LastUpdated>
+          Last updated: {new Date().toLocaleString()}
+        </LastUpdated>
 
       </AnalyticsSection>
     </AnalyticsContainer>
