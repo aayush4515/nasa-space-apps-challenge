@@ -24,7 +24,7 @@ selected_features = [
 
 # file path
 file_path = "/Users/aayush/Desktop/Projects/nasa-space-apps-challenge/Assets/TOI_2025.10.04_12.05.38.csv"
-output_path = "clean_tess_dataset.xlsx"
+output_path = "clean_tess_dataset.csv"
 
 # Detect header row dynamically (first line that doesn't start with '#')
 with open(file_path, 'r') as f:

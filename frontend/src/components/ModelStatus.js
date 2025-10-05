@@ -82,11 +82,10 @@ const LastTrainingInfo = styled.div`
   font-family: 'Space Mono', monospace;
 `;
 
-function ModelStatus({ currentModel, accuracy, lastTraining }) {
+function ModelStatus({ currentModel, accuracy, lastSearch }) {
   const getModelDisplayName = (model) => {
     switch (model) {
       case 'pretrained': return 'Pre-trained Model';
-      case 'trainable': return 'Trainable Model';
       default: return 'Unknown Model';
     }
   };
@@ -103,11 +102,11 @@ function ModelStatus({ currentModel, accuracy, lastTraining }) {
         ACTIVE
       </StatusIndicator>
       
-      {lastTraining && (
+      {lastSearch && (
         <LastTraining>
-          <LastTrainingTitle>Last Training</LastTrainingTitle>
+          <LastTrainingTitle>Last Search</LastTrainingTitle>
           <LastTrainingInfo>
-            {new Date(lastTraining.timestamp).toLocaleDateString()} - {(lastTraining.accuracy * 100).toFixed(1)}% accuracy
+            {new Date(lastSearch.timestamp).toLocaleDateString()} - Found exoplanet {lastSearch.exoplanet_id}
           </LastTrainingInfo>
         </LastTraining>
       )}

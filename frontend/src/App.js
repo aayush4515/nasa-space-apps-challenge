@@ -3,9 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import styled from 'styled-components';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
-import FileUpload from './components/FileUpload';
-import ModelTraining from './components/ModelTraining';
-import Predictions from './components/Predictions';
+import Search from './components/Search';
 import Analytics from './components/Analytics';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -24,14 +22,12 @@ const MainContent = styled.main`
 
 function App() {
   const [currentModel, setCurrentModel] = useState('pretrained');
-  const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [trainingHistory, setTrainingHistory] = useState([]);
+  const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // FIXME: Load initial data from backend
-    // fetchTrainingHistory();
-    // fetchAvailableModels();
+    // fetchSearchHistory();
   }, []);
 
   const handleModelSwitch = (modelType) => {
@@ -40,16 +36,10 @@ function App() {
     console.log(`Switched to ${modelType} model`);
   };
 
-  const handleFileUpload = (fileData) => {
-    setUploadedFiles(prev => [...prev, fileData]);
-    // FIXME: Implement file upload logic
-    console.log('File uploaded:', fileData);
-  };
-
-  const handleTrainingComplete = (trainingData) => {
-    setTrainingHistory(prev => [...prev, trainingData]);
-    // FIXME: Implement training completion logic
-    console.log('Training completed:', trainingData);
+  const handleSearchResult = (searchData) => {
+    setSearchResults(prev => [...prev, searchData]);
+    // FIXME: Implement search result handling logic
+    console.log('Search completed:', searchData);
   };
 
   return (
@@ -67,36 +57,17 @@ function App() {
               element={
                 <Dashboard 
                   currentModel={currentModel}
-                  uploadedFiles={uploadedFiles}
-                  trainingHistory={trainingHistory}
+                  searchResults={searchResults}
                 />
               } 
             />
             <Route 
-              path="/upload" 
+              path="/search" 
               element={
-                <FileUpload 
-                  onFileUpload={handleFileUpload}
+                <Search 
+                  onSearchResult={handleSearchResult}
                   isLoading={isLoading}
                   setIsLoading={setIsLoading}
-                />
-              } 
-            />
-            <Route 
-              path="/training" 
-              element={
-                <ModelTraining 
-                  onTrainingComplete={handleTrainingComplete}
-                  currentModel={currentModel}
-                />
-              } 
-            />
-            <Route 
-              path="/predictions" 
-              element={
-                <Predictions 
-                  currentModel={currentModel}
-                  uploadedFiles={uploadedFiles}
                 />
               } 
             />
@@ -104,7 +75,7 @@ function App() {
               path="/analytics" 
               element={
                 <Analytics 
-                  trainingHistory={trainingHistory}
+                  searchResults={searchResults}
                   currentModel={currentModel}
                 />
               } 

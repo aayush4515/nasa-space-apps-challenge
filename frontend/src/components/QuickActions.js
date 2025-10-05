@@ -70,28 +70,16 @@ const ActionDescription = styled.div`
 function QuickActions() {
   const actions = [
     {
-      to: '/upload',
-      icon: '📁',
-      title: 'Upload Data',
-      description: 'Upload CSV files for training or testing'
-    },
-    {
-      to: '/training',
-      icon: '🧠',
-      title: 'Train Model',
-      description: 'Configure and train machine learning models'
-    },
-    {
-      to: '/predictions',
+      to: '/search',
       icon: '🔮',
-      title: 'Make Predictions',
-      description: 'Use trained models to identify exoplanets'
+      title: 'Predict Candidates',
+      description: 'Get ML predictions for exoplanet candidates'
     },
     {
       to: '/analytics',
       icon: '📊',
       title: 'View Analytics',
-      description: 'Analyze model performance and statistics'
+      description: 'Analyze search results and model performance'
     }
   ];
 

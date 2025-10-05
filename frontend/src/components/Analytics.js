@@ -178,7 +178,7 @@ const LoadingSpinner = styled.div`
   color: #4a9eff;
 `;
 
-function Analytics({ trainingHistory, currentModel }) {
+function Analytics({ searchResults, currentModel }) {
   const [analyticsData, setAnalyticsData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -189,28 +189,24 @@ function Analytics({ trainingHistory, currentModel }) {
         
         // FIXME: Replace with actual API calls
         const mockData = {
-          trainingHistory: [
-            { date: '2024-01-01', accuracy: 0.85, model: 'pretrained' },
-            { date: '2024-01-02', accuracy: 0.87, model: 'pretrained' },
-            { date: '2024-01-03', accuracy: 0.89, model: 'trainable' },
-            { date: '2024-01-04', accuracy: 0.91, model: 'trainable' },
-            { date: '2024-01-05', accuracy: 0.88, model: 'trainable' },
-            { date: '2024-01-06', accuracy: 0.93, model: 'trainable' },
-            { date: '2024-01-07', accuracy: 0.90, model: 'trainable' }
+          searchHistory: searchResults.map((result, index) => ({
+            date: new Date(Date.now() - index * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            dataset: result.dataset,
+            exoplanet_id: result.exoplanet_id
+          })),
+          datasetUsage: [
+            { name: 'Kepler', searches: searchResults.filter(r => r.dataset === 'kepler').length },
+            { name: 'TESS', searches: searchResults.filter(r => r.dataset === 'tess').length }
           ],
-          modelComparison: [
-            { name: 'Pre-trained', accuracy: 0.87, samples: 1000 },
-            { name: 'Trainable', accuracy: 0.92, samples: 500 }
-          ],
-          predictionDistribution: [
-            { name: 'Exoplanets', value: 247, color: '#4caf50' },
-            { name: 'False Positives', value: 753, color: '#f44336' }
+          searchDistribution: [
+            { name: 'Kepler', value: searchResults.filter(r => r.dataset === 'kepler').length, color: '#4caf50' },
+            { name: 'TESS', value: searchResults.filter(r => r.dataset === 'tess').length, color: '#4a9eff' }
           ],
           monthlyStats: {
-            totalPredictions: 1000,
-            exoplanetsFound: 247,
-            accuracy: 0.92,
-            trainingRuns: 7
+            totalSearches: searchResults.length,
+            keplerSearches: searchResults.filter(r => r.dataset === 'kepler').length,
+            tessSearches: searchResults.filter(r => r.dataset === 'tess').length,
+            accuracy: 0.92
           }
         };
         
@@ -223,7 +219,7 @@ function Analytics({ trainingHistory, currentModel }) {
     };
 
     fetchAnalyticsData();
-  }, [trainingHistory]);
+  }, [searchResults]);
 
   if (isLoading) {
     return (
@@ -257,29 +253,29 @@ function Analytics({ trainingHistory, currentModel }) {
 
         <StatsGrid>
           <StatCard>
-            <StatValue color="#4a9eff">{analyticsData.monthlyStats.totalPredictions}</StatValue>
-            <StatLabel>Total Predictions</StatLabel>
+            <StatValue color="#4a9eff">{analyticsData.monthlyStats.totalSearches}</StatValue>
+            <StatLabel>Total Searches</StatLabel>
           </StatCard>
           <StatCard>
-            <StatValue color="#4caf50">{analyticsData.monthlyStats.exoplanetsFound}</StatValue>
-            <StatLabel>Exoplanets Found</StatLabel>
+            <StatValue color="#4caf50">{analyticsData.monthlyStats.keplerSearches}</StatValue>
+            <StatLabel>Kepler Searches</StatLabel>
           </StatCard>
           <StatCard>
             <StatValue color="#ff9800">{(analyticsData.monthlyStats.accuracy * 100).toFixed(1)}%</StatValue>
-            <StatLabel>Average Accuracy</StatLabel>
+            <StatLabel>Model Accuracy</StatLabel>
           </StatCard>
           <StatCard>
-            <StatValue color="#6bb6ff">{analyticsData.monthlyStats.trainingRuns}</StatValue>
-            <StatLabel>Training Runs</StatLabel>
+            <StatValue color="#6bb6ff">{analyticsData.monthlyStats.tessSearches}</StatValue>
+            <StatLabel>TESS Searches</StatLabel>
           </StatCard>
         </StatsGrid>
 
         <ChartsGrid>
           <ChartCard>
-            <ChartTitle>Training Accuracy Over Time</ChartTitle>
+            <ChartTitle>Search Activity Over Time</ChartTitle>
             <ChartContainer>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={analyticsData.trainingHistory}>
+                <LineChart data={analyticsData.searchHistory}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(74, 158, 255, 0.2)" />
                   <XAxis 
                     dataKey="date" 
@@ -300,7 +296,7 @@ function Analytics({ trainingHistory, currentModel }) {
                   />
                   <Line 
                     type="monotone" 
-                    dataKey="accuracy" 
+                    dataKey="exoplanet_id" 
                     stroke="#4a9eff" 
                     strokeWidth={3}
                     dot={{ fill: '#4a9eff', strokeWidth: 2, r: 4 }}
@@ -311,10 +307,10 @@ function Analytics({ trainingHistory, currentModel }) {
           </ChartCard>
 
           <ChartCard>
-            <ChartTitle>Model Performance Comparison</ChartTitle>
+            <ChartTitle>Dataset Usage</ChartTitle>
             <ChartContainer>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={analyticsData.modelComparison}>
+                <BarChart data={analyticsData.datasetUsage}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(74, 158, 255, 0.2)" />
                   <XAxis 
                     dataKey="name" 
@@ -333,26 +329,26 @@ function Analytics({ trainingHistory, currentModel }) {
                       color: 'white'
                     }}
                   />
-                  <Bar dataKey="accuracy" fill="#4a9eff" />
+                  <Bar dataKey="searches" fill="#4a9eff" />
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
           </ChartCard>
 
           <ChartCard>
-            <ChartTitle>Prediction Distribution</ChartTitle>
+            <ChartTitle>Search Distribution</ChartTitle>
             <ChartContainer>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={analyticsData.predictionDistribution}
+                    data={analyticsData.searchDistribution}
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
                     dataKey="value"
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   >
-                    {analyticsData.predictionDistribution.map((entry, index) => (
+                    {analyticsData.searchDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -371,20 +367,20 @@ function Analytics({ trainingHistory, currentModel }) {
         </ChartsGrid>
 
         <ModelComparison>
-          <ComparisonTitle>Model Performance Summary</ComparisonTitle>
+          <ComparisonTitle>Dataset Usage Summary</ComparisonTitle>
           <ComparisonGrid>
-            {analyticsData.modelComparison.map((model, index) => {
-              const isBest = model.accuracy === Math.max(...analyticsData.modelComparison.map(m => m.accuracy));
+            {analyticsData.datasetUsage.map((dataset, index) => {
+              const isMostUsed = dataset.searches === Math.max(...analyticsData.datasetUsage.map(d => d.searches));
               return (
-                <ComparisonCard key={index} isBest={isBest}>
-                  {isBest && <BestBadge>Best</BestBadge>}
-                  <ModelName>{model.name}</ModelName>
-                  <ModelAccuracy isBest={isBest}>
-                    {(model.accuracy * 100).toFixed(1)}%
+                <ComparisonCard key={index} isBest={isMostUsed}>
+                  {isMostUsed && <BestBadge>Most Used</BestBadge>}
+                  <ModelName>{dataset.name}</ModelName>
+                  <ModelAccuracy isBest={isMostUsed}>
+                    {dataset.searches}
                   </ModelAccuracy>
-                  <ModelLabel>Accuracy</ModelLabel>
+                  <ModelLabel>Searches</ModelLabel>
                   <div style={{ marginTop: '8px', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                    {model.samples} samples
+                    {dataset.name} dataset
                   </div>
                 </ComparisonCard>
               );

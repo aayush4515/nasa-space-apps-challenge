@@ -85,12 +85,12 @@ const LoadingSpinner = styled.div`
   color: #4a9eff;
 `;
 
-function Dashboard({ currentModel, uploadedFiles, trainingHistory }) {
+function Dashboard({ currentModel, searchResults }) {
   const [dashboardData, setDashboardData] = useState({
-    totalFiles: 0,
+    totalSearches: 0,
     totalPredictions: 0,
-    modelAccuracy: 0,
-    lastTraining: null
+    modelAccuracy: 0.92,
+    lastSearch: null
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -102,10 +102,10 @@ function Dashboard({ currentModel, uploadedFiles, trainingHistory }) {
         
         // Placeholder data - replace with actual API calls
         const mockData = {
-          totalFiles: uploadedFiles.length,
+          totalSearches: searchResults.length,
           totalPredictions: Math.floor(Math.random() * 1000) + 500,
-          modelAccuracy: Math.random() * 0.3 + 0.7, // 70-100%
-          lastTraining: trainingHistory.length > 0 ? trainingHistory[trainingHistory.length - 1] : null
+          modelAccuracy: 0.92, // Fixed accuracy for pre-trained model
+          lastSearch: searchResults.length > 0 ? searchResults[searchResults.length - 1] : null
         };
         
         setDashboardData(mockData);
@@ -117,7 +117,7 @@ function Dashboard({ currentModel, uploadedFiles, trainingHistory }) {
     };
 
     fetchDashboardData();
-  }, [uploadedFiles, trainingHistory]);
+  }, [searchResults]);
 
   if (isLoading) {
     return (
@@ -135,32 +135,32 @@ function Dashboard({ currentModel, uploadedFiles, trainingHistory }) {
       <WelcomeSection>
         <WelcomeTitle>Welcome to NASA Exoplanet Detector</WelcomeTitle>
         <WelcomeSubtitle>
-          Harness the power of AI to discover exoplanets in space mission data. 
-          Upload datasets, train models, and make predictions with cutting-edge machine learning.
+          Harness the power of AI to analyze exoplanet candidates in NASA mission data. 
+          Get ML predictions with confidence scores for Kepler and TESS candidates.
         </WelcomeSubtitle>
       </WelcomeSection>
 
       <StatsGrid>
         <StatsCard
-          title="Total Files"
-          value={dashboardData.totalFiles}
-          icon="📁"
+          title="Total Predictions"
+          value={dashboardData.totalSearches}
+          icon="🔮"
           color="#4a9eff"
           trend="+12%"
-        />
-        <StatsCard
-          title="Predictions Made"
-          value={dashboardData.totalPredictions.toLocaleString()}
-          icon="🔮"
-          color="#6bb6ff"
-          trend="+8%"
         />
         <StatsCard
           title="Model Accuracy"
           value={`${(dashboardData.modelAccuracy * 100).toFixed(1)}%`}
           icon="🎯"
+          color="#6bb6ff"
+          trend="+2%"
+        />
+        <StatsCard
+          title="Active Model"
+          value="Pre-trained"
+          icon="🤖"
           color="#4caf50"
-          trend="+2.3%"
+          trend="Ready"
         />
         <StatsCard
           title="Exoplanets Found"
@@ -175,8 +175,7 @@ function Dashboard({ currentModel, uploadedFiles, trainingHistory }) {
         <Section>
           <SectionTitle>Recent Activity</SectionTitle>
           <RecentActivity 
-            uploadedFiles={uploadedFiles}
-            trainingHistory={trainingHistory}
+            searchResults={searchResults}
           />
         </Section>
         
@@ -185,7 +184,7 @@ function Dashboard({ currentModel, uploadedFiles, trainingHistory }) {
           <ModelStatus 
             currentModel={currentModel}
             accuracy={dashboardData.modelAccuracy}
-            lastTraining={dashboardData.lastTraining}
+            lastSearch={dashboardData.lastSearch}
           />
         </Section>
       </SectionGrid>

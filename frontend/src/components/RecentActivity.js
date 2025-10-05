@@ -57,11 +57,10 @@ const NoActivityMessage = styled.div`
   font-size: 14px;
 `;
 
-function RecentActivity({ uploadedFiles, trainingHistory }) {
+function RecentActivity({ searchResults }) {
   const getActivityIcon = (type) => {
     switch (type) {
-      case 'upload': return '📁';
-      case 'training': return '🧠';
+      case 'search': return '🔮';
       case 'prediction': return '🔮';
       default: return '📊';
     }
@@ -74,24 +73,18 @@ function RecentActivity({ uploadedFiles, trainingHistory }) {
 
   // Combine and sort activities
   const activities = [
-    ...uploadedFiles.map(file => ({
-      type: 'upload',
-      title: 'File Uploaded',
-      description: file.filename || file.name,
-      timestamp: file.uploadTime || new Date().toISOString()
-    })),
-    ...trainingHistory.map(training => ({
-      type: 'training',
-      title: 'Model Training',
-      description: `Training completed with ${(training.accuracy * 100).toFixed(1)}% accuracy`,
-      timestamp: training.timestamp
+    ...searchResults.map(result => ({
+      type: 'search',
+      title: 'ML Prediction',
+      description: `Predicted candidate ${result.exoplanet_id} with ${result.prediction?.confidence || 'N/A'}% confidence`,
+      timestamp: new Date().toISOString()
     }))
   ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 5);
 
   if (activities.length === 0) {
     return (
       <NoActivityMessage>
-        No recent activity. Upload files or train models to see activity here.
+        No recent activity. Make predictions to see activity here.
       </NoActivityMessage>
     );
   }

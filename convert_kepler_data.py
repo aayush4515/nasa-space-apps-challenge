@@ -9,23 +9,13 @@ import csv
 
 # features to include
 selected_features = [
-    "koi_period", "koi_time0bk", "koi_time0", "koi_impact", "koi_duration",
+    "koi_period",
+    "koi_time0bk",
+    "koi_duration",
     "koi_depth",
-    "koi_ror",
-    "koi_srho",
-    "koi_prad",
-    "koi_sma",
-    "koi_incl",
-    "koi_teq",
-    "koi_insol",
-    "koi_dor",
-    "koi_ldm_coeff2",
-    "koi_ldm_coeff1",
     "koi_max_sngle_ev",
     "koi_max_mult_ev",
-    "koi_model_snr",
     "koi_num_transits",
-    "koi_bin_oedp_sig",
     "koi_steff",
     "koi_slogg",
     "koi_smet",
@@ -33,34 +23,12 @@ selected_features = [
     "koi_smass",
     "ra",
     "dec",
-    "koi_kepmag",
-    "koi_gmag",
-    "koi_rmag",
-    "koi_imag",
-    "koi_zmag",
-    "koi_jmag",
-    "koi_hmag",
-    "koi_kmag",
-    "koi_fwm_stat_sig",
-    "koi_fwm_sra",
-    "koi_fwm_sdec",
-    "koi_fwm_srao",
-    "koi_fwm_sdeco",
-    "koi_fwm_prao",
-    "koi_fwm_pdeco",
-    "koi_dicco_mra",
-    "koi_dicco_mdec",
-    "koi_dicco_msky",
-    "koi_dikco_mra",
-    "koi_dikco_mdec",
-    "koi_dikco_msky",
-    "koi_fittype_LS",
-    "koi_fittype_MCMC"
+    "koi_kepmag"
 ]
 
 # file path
-file_path = "/Users/aayush/Desktop/Projects/nasa-space-apps-challenge/Assets/cumulative_2025.10.04_08.42.21.csv"
-output_path = "cleaned_kepler_dataset.xlsx"
+file_path = "/Users/aayush/Desktop/Projects/nasa-space-apps-challenge/Assets/kepler.csv"
+output_path = "clean_kepler_dataset.csv"
 
 # Detect header row dynamically (first line that doesn't start with '#')
 with open(file_path, 'r') as f:

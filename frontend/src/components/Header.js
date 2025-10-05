@@ -195,25 +195,11 @@ function Header({ currentModel, onModelSwitch }) {
             Dashboard
           </NavLink>
           <NavLink 
-            to="/upload" 
-            active={location.pathname === '/upload' ? 1 : 0}
-            className={location.pathname === '/upload' ? 'active' : ''}
+            to="/search" 
+            active={location.pathname === '/search' ? 1 : 0}
+            className={location.pathname === '/search' ? 'active' : ''}
           >
-            Upload
-          </NavLink>
-          <NavLink 
-            to="/training" 
-            active={location.pathname === '/training' ? 1 : 0}
-            className={location.pathname === '/training' ? 'active' : ''}
-          >
-            Training
-          </NavLink>
-          <NavLink 
-            to="/predictions" 
-            active={location.pathname === '/predictions' ? 1 : 0}
-            className={location.pathname === '/predictions' ? 'active' : ''}
-          >
-            Predictions
+            Predict
           </NavLink>
           <NavLink 
             to="/analytics" 
@@ -227,16 +213,10 @@ function Header({ currentModel, onModelSwitch }) {
             <ModelLabel>Model:</ModelLabel>
             <ModelToggle>
               <ToggleButton
-                active={currentModel === 'pretrained'}
-                onClick={() => onModelSwitch('pretrained')}
+                active={true}
+                disabled={true}
               >
                 Pre-trained
-              </ToggleButton>
-              <ToggleButton
-                active={currentModel === 'trainable'}
-                onClick={() => onModelSwitch('trainable')}
-              >
-                Trainable
               </ToggleButton>
             </ModelToggle>
           </ModelSelector>
