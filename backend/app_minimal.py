@@ -159,7 +159,7 @@ def save_prediction():
 
 @app.route('/api/lightcurve/generate', methods=['POST'])
 def generate_lightcurve_endpoint():
-    """Generate lightcurve for a specific KOI name - HYBRID APPROACH"""
+    """Generate lightcurve for a specific KOI name - OPTIMIZED FOR PRODUCTION"""
     try:
         data = request.get_json()
         koi_name = data.get('koi_name')
@@ -184,31 +184,60 @@ def generate_lightcurve_endpoint():
                 'url': f"/api/lightcurve/{filename}"
             })
 
-        # Generate lightcurve
-        success, image_data, filename, kepid = generate_lightcurve(koi_name)
+        # OPTIMIZATION: Add timeout protection
+        import signal
+        import time
         
-        if success and image_data:
-            # Save to file (for immediate compatibility)
-            with open(file_path, 'wb') as f:
-                f.write(image_data)
+        def timeout_handler(signum, frame):
+            raise TimeoutError("Lightcurve generation timed out")
+        
+        # Set 30 second timeout
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(30)
+        
+        try:
+            # Generate lightcurve with timeout protection
+            logger.info(f"Starting lightcurve generation for {koi_name}")
+            start_time = time.time()
             
-            # Also try to save to database if available
-            try:
-                db.save_lightcurve(koi_name, kepid, image_data, filename)
-            except Exception as db_error:
-                logger.warning(f"Could not save to database: {db_error}")
+            success, image_data, filename, kepid = generate_lightcurve(koi_name)
             
-            return jsonify({
-                'success': True,
-                'filename': filename,
-                'title': f"Lightcurve for {koi_name}",
-                'url': f"/api/lightcurve/{filename}"
-            })
-        else:
+            generation_time = time.time() - start_time
+            logger.info(f"Lightcurve generation took {generation_time:.2f} seconds")
+            
+            signal.alarm(0)  # Cancel timeout
+            
+            if success and image_data:
+                # Save to file (for immediate compatibility)
+                with open(file_path, 'wb') as f:
+                    f.write(image_data)
+                
+                # Also try to save to database if available
+                try:
+                    db.save_lightcurve(koi_name, kepid, image_data, filename)
+                except Exception as db_error:
+                    logger.warning(f"Could not save to database: {db_error}")
+                
+                return jsonify({
+                    'success': True,
+                    'filename': filename,
+                    'title': f"Lightcurve for {koi_name}",
+                    'url': f"/api/lightcurve/{filename}",
+                    'generation_time': round(generation_time, 2)
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to generate lightcurve - no data returned'
+                }), 500
+                
+        except TimeoutError:
+            signal.alarm(0)  # Cancel timeout
+            logger.error(f"Lightcurve generation timed out for {koi_name}")
             return jsonify({
                 'success': False,
-                'error': 'Failed to generate lightcurve'
-            }), 500
+                'error': 'Lightcurve generation timed out - try again later'
+            }), 408  # Request Timeout
             
     except Exception as e:
         logger.error(f"Error generating lightcurve: {str(e)}")

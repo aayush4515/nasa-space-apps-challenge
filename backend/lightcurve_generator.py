@@ -57,6 +57,7 @@ class LightcurveGenerator:
     def retrieve_lc(self, kepid: int) -> Tuple[bool, bytes, str]:
         """
         Retrieve and generate lightcurve for a given kepid.
+        OPTIMIZED for production deployment with memory constraints.
         
         Args:
             kepid: The Kepler ID
@@ -70,43 +71,56 @@ class LightcurveGenerator:
             
             logger.info(f"Generating lightcurve for kepid: {kepid}")
             
-            # Download all short exposures
-            lcs = lk.search_lightcurve(kepler_id, exptime='long', author='Kepler', limit=3).download_all()
+            # OPTIMIZATION: Limit data download and processing
+            lcs = lk.search_lightcurve(kepler_id, exptime='long', author='Kepler', limit=1).download_all()
             
             if not lcs:
                 logger.warning(f"No lightcurve data found for {kepler_id}")
                 return False, None, None
             
-            # Stitch light curves together
+            # OPTIMIZATION: Simplified processing
             lcRaw = lcs.stitch()
             
-            # Remove outliers with sigma clipping
+            # OPTIMIZATION: Skip heavy processing steps that cause timeouts
+            # Just use basic cleaning
             lcClean = lcRaw.remove_outliers()
             
-            # Fill gaps with randomly distributed Gaussian noise
-            lcClean = lcClean.fill_gaps()
+            # OPTIMIZATION: Skip gap filling and flattening to reduce processing time
+            # lcClean = lcClean.fill_gaps()
+            # lcClean = lcClean.flatten()
+            # lcClean = lcClean.bin()
             
-            # Flatten curve with a Savitzky-Golay filter
-            lcClean = lcClean.flatten()
-            lcClean = lcClean.bin()
+            # OPTIMIZATION: Smaller figure size and lower DPI
+            plt.figure(figsize=(4, 3), dpi=100)  # Reduced size and DPI
+            plt.title(f"Light Curve for KIC {kepid}", fontsize=10, fontweight='bold')
+            plt.xlabel("Time (days)", fontsize=8)
+            plt.ylabel("Normalized Flux", fontsize=8)
             
-            # Plot using matplotlib
-            plt.figure(figsize=(6, 4))
-            plt.title(f"Light Curve for KIC {kepid}", fontsize=14, fontweight='bold')
-            plt.xlabel("Time (days)", fontsize=12)
-            plt.ylabel("Normalized Flux", fontsize=12)
-            plt.plot(lcClean.time.value, lcClean.flux, lw=1, color='#4a9eff', alpha=0.8)
+            # OPTIMIZATION: Plot fewer points to reduce memory usage
+            time_values = lcClean.time.value
+            flux_values = lcClean.flux
+            
+            # Downsample if too many points
+            if len(time_values) > 1000:
+                step = len(time_values) // 1000
+                time_values = time_values[::step]
+                flux_values = flux_values[::step]
+            
+            plt.plot(time_values, flux_values, lw=0.5, color='#4a9eff', alpha=0.8)
             plt.grid(True, alpha=0.3)
             plt.tight_layout()
             
-            # Save the plot to bytes buffer
+            # OPTIMIZATION: Lower DPI and smaller buffer
             buffer = io.BytesIO()
-            plt.savefig(buffer, dpi=300, bbox_inches='tight', facecolor='white', format='png')
+            plt.savefig(buffer, dpi=150, bbox_inches='tight', facecolor='white', format='png')
             plt.close()  # Close the figure to free memory
             
             # Get the image data
             image_data = buffer.getvalue()
             buffer.close()
+            
+            # OPTIMIZATION: Clear variables to free memory
+            del lcs, lcRaw, lcClean, time_values, flux_values
             
             logger.info(f"Lightcurve generated for kepid: {kepid}")
             return True, image_data, file_name
@@ -118,6 +132,7 @@ class LightcurveGenerator:
     def generate_lightcurve_for_kepoi(self, kepoi_name: str) -> Tuple[bool, bytes, str, int]:
         """
         Generate lightcurve for a given kepoi_name.
+        Uses fallback simple generator if full generation fails.
         
         Args:
             kepoi_name: The Kepler Object of Interest name
@@ -131,8 +146,18 @@ class LightcurveGenerator:
             if kepid is None:
                 return False, None, None, None
             
-            # Generate lightcurve
-            success, image_data, filename = self.retrieve_lc(kepid)
+            # Try full lightcurve generation first
+            try:
+                success, image_data, filename = self.retrieve_lc(kepid)
+                if success and image_data:
+                    return success, image_data, filename, kepid
+            except Exception as e:
+                logger.warning(f"Full lightcurve generation failed for {kepoi_name}: {str(e)}")
+            
+            # Fallback to simple lightcurve generation
+            logger.info(f"Using fallback simple lightcurve for {kepoi_name}")
+            from simple_lightcurve import generate_simple_lightcurve
+            success, image_data, filename = generate_simple_lightcurve(kepid)
             return success, image_data, filename, kepid
             
         except Exception as e:
