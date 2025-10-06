@@ -531,7 +531,7 @@ function Search({ onSearchResult }) {
         }
         
         const statusText = result.is_exoplanet ? 'is an exoplanet' : 'is not an exoplanet';
-        toast.success(`Prediction complete! ${result.confidence}% confident ${result.exoplanet_id} ${statusText}.`);
+        toast.success(`Prediction complete! ${result.confidence}% confident ${result.candidate_id} ${statusText}.`);
       } else {
         toast.error(result.message || 'Prediction failed');
         setSearchResults(null);
