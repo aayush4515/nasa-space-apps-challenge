@@ -7,6 +7,7 @@ class PredictionService {
   constructor() {
     this.currentDataset = null;
     this.currentCandidate = null;
+    this.baseURL = 'https://nasa-space-apps-challenge-frqb.onrender.com';
   }
 
   /**
@@ -28,7 +29,7 @@ class PredictionService {
   async getCandidates() {
     try {
       // Call the Kepler API endpoint to get candidates from text files
-      const response = await fetch('/api/autocomplete/kepler');
+      const response = await fetch(`${this.baseURL}/api/autocomplete/kepler`);
       if (response.ok) {
         const data = await response.json();
         return data.suggestions || [];
@@ -74,7 +75,7 @@ class PredictionService {
 
     try {
       // Call Kepler API endpoint
-      const response = await fetch('/api/predict/kepler', {
+      const response = await fetch(`${this.baseURL}/api/predict/kepler`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -134,7 +135,7 @@ class PredictionService {
     }
 
     try {
-      const response = await fetch('/api/lightcurve/generate', {
+      const response = await fetch(`${this.baseURL}/api/lightcurve/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

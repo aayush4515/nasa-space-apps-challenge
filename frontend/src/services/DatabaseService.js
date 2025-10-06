@@ -5,7 +5,7 @@
 
 class DatabaseService {
   constructor() {
-    this.baseURL = '';
+    this.baseURL = 'https://nasa-space-apps-challenge-frqb.onrender.com';
   }
 
   /**
@@ -15,7 +15,7 @@ class DatabaseService {
    */
   async savePrediction(predictionData) {
     try {
-      const response = await fetch('/api/predictions/save', {
+      const response = await fetch(`${this.baseURL}/api/predictions/save`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -42,7 +42,7 @@ class DatabaseService {
    */
   async loadPredictions() {
     try {
-      const response = await fetch('/api/predictions');
+      const response = await fetch(`${this.baseURL}/api/predictions`);
       
       if (response.ok) {
         const data = await response.json();
@@ -64,7 +64,7 @@ class DatabaseService {
    */
   async loadStats() {
     try {
-      const response = await fetch('/api/predictions/stats');
+      const response = await fetch(`${this.baseURL}/api/predictions/stats`);
       
       if (response.ok) {
         const stats = await response.json();
