@@ -849,7 +849,7 @@ function Search({ onSearchResult }) {
                       marginTop: '16px'
                     }}>
                       <img 
-                        src={`http://localhost:5002${lightcurveData.url}`}
+                        src={lightcurveData.url}
                         alt="Lightcurve"
                         style={{
                           maxWidth: '100%',
