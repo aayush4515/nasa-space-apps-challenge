@@ -161,10 +161,10 @@ def save_prediction():
         return jsonify({'error': 'Failed to save prediction'}), 500
 
 def create_simple_lightcurve(kepid):
-    """Create a simple synthetic lightcurve"""
+    """Create a simple synthetic lightcurve - ULTRA OPTIMIZED"""
     try:
-        # Create time points
-        time_points = np.linspace(0, 100, 500)  # 100 days, 500 points
+        # OPTIMIZATION: Use fewer points and smaller figure
+        time_points = np.linspace(0, 50, 200)  # Reduced: 50 days, 200 points
         
         # Create a realistic lightcurve with some noise and periodic variations
         flux = 1.0 + 0.1 * np.sin(2 * np.pi * time_points / 10)  # 10-day period
@@ -172,28 +172,31 @@ def create_simple_lightcurve(kepid):
         flux += 0.02 * np.random.normal(0, 1, len(time_points))  # Noise
         
         # Add some transit-like dips
-        transit_times = [20, 40, 60, 80]
+        transit_times = [10, 20, 30, 40]
         for transit_time in transit_times:
-            mask = np.abs(time_points - transit_time) < 1
+            mask = np.abs(time_points - transit_time) < 0.5
             flux[mask] -= 0.15  # 15% dip
         
-        # Create the plot
-        plt.figure(figsize=(6, 4), dpi=100)
-        plt.title(f"Light Curve for KIC {kepid}", fontsize=12, fontweight='bold')
-        plt.xlabel("Time (days)", fontsize=10)
-        plt.ylabel("Normalized Flux", fontsize=10)
-        plt.plot(time_points, flux, lw=1, color='#4a9eff', alpha=0.8)
+        # OPTIMIZATION: Smaller figure and lower DPI
+        plt.figure(figsize=(4, 3), dpi=80)  # Much smaller
+        plt.title(f"Light Curve for KIC {kepid}", fontsize=10, fontweight='bold')
+        plt.xlabel("Time (days)", fontsize=8)
+        plt.ylabel("Normalized Flux", fontsize=8)
+        plt.plot(time_points, flux, lw=0.8, color='#4a9eff', alpha=0.8)
         plt.grid(True, alpha=0.3)
         plt.ylim(0.8, 1.2)
         plt.tight_layout()
         
-        # Save to bytes buffer
+        # OPTIMIZATION: Lower DPI and smaller buffer
         buffer = io.BytesIO()
-        plt.savefig(buffer, dpi=150, bbox_inches='tight', facecolor='white', format='png')
-        plt.close()
+        plt.savefig(buffer, dpi=100, bbox_inches='tight', facecolor='white', format='png')
+        plt.close()  # Critical: close immediately
         
         image_data = buffer.getvalue()
         buffer.close()
+        
+        # OPTIMIZATION: Clear variables
+        del time_points, flux, transit_times
         
         return image_data
         
