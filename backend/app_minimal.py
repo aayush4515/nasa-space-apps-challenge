@@ -28,18 +28,32 @@ def get_autocomplete_suggestions():
         if not os.path.exists(options_file):
             return jsonify({'error': 'Kepler options file not found'}), 400
         
+        # Read all options from text file
         with open(options_file, 'r') as f:
             suggestions = [line.strip() for line in f.readlines() if line.strip()]
         
-        return jsonify({'suggestions': suggestions})
+        query = request.args.get('q', '').lower()
+        
+        # Filter suggestions based on query (if provided)
+        if query:
+            suggestions = [s for s in suggestions if query in s.lower()]
+            # Limit to 20 suggestions for autocomplete
+            suggestions = suggestions[:20]
+        # If no query, return all suggestions for dropdown
+        
+        return jsonify({
+            'suggestions': suggestions,
+            'dataset': 'kepler',
+            'total_count': len(suggestions)
+        })
         
     except Exception as e:
-        logger.error(f"Error loading autocomplete suggestions: {str(e)}")
-        return jsonify({'error': 'Failed to load suggestions'}), 500
+        logger.error(f"Error reading Kepler options: {str(e)}")
+        return jsonify({'error': 'Failed to load Kepler options'}), 500
 
 @app.route('/api/predict/kepler', methods=['POST'])
 def predict_kepler():
-    """Make prediction for Kepler candidate"""
+    """Make prediction for Kepler dataset using ml_models module"""
     try:
         data = request.get_json()
         koi_name = data.get('koi_name')
@@ -47,21 +61,51 @@ def predict_kepler():
         if not koi_name:
             return jsonify({'error': 'KOI name is required'}), 400
         
-        # Make prediction
-        prediction_result = predict_datapoint(koi_name)
+        # Load the data point from CSV
+        csv_path = '../Assets/clean_kepler_dataset.csv'
+        if not os.path.exists(csv_path):
+            return jsonify({'error': 'Kepler dataset not found'}), 400
         
-        if prediction_result['status'] == 'success':
-            return jsonify({
-                'prediction': prediction_result['prediction'],
-                'nasa_classification': prediction_result.get('nasa_classification', 'UNKNOWN'),
-                'message': f"Prediction completed for {koi_name}"
-            })
-        else:
-            return jsonify({'error': prediction_result['message']}), 500
+        df = pd.read_csv(csv_path)
+        
+        # Find the specific row with the matching kepoi_name
+        matching_rows = df[df['kepoi_name'] == koi_name]
+        
+        if matching_rows.empty:
+            return jsonify({'error': f'KOI name {koi_name} not found in dataset'}), 404
+        
+        # Get the first matching row
+        matching_row = matching_rows.iloc[[0]]
+        
+        # Extract NASA classification
+        nasa_classification = matching_row['koi_disposition'].iloc[0]
+        
+        # Skip first three columns (kepoi_name, koi_disposition, and kepid) and use the rest for prediction
+        data_point = matching_row.drop(['kepoi_name', 'koi_disposition', 'kepid'], axis=1)
+        
+        # Use ml_models module for prediction
+        result = predict_datapoint('kepler', data_point)
+        
+        if result['status'] == 'success':
+            response_data = {
+                'message': 'Kepler prediction completed',
+                'prediction': {
+                    'is_exoplanet': result['is_exoplanet'],
+                    'confidence': result['confidence'],
+                    'koi_name': koi_name,
+                    'model_version': result['model_version']
+                },
+                'nasa_classification': nasa_classification
+            }
             
+            return jsonify(response_data)
+        else:
+            return jsonify({'error': result['message']}), 500
+        
     except Exception as e:
-        logger.error(f"Error making prediction: {str(e)}")
-        return jsonify({'error': f'Prediction failed: {str(e)}'}), 500
+        logger.error(f"Kepler prediction error: {str(e)}")
+        return jsonify({'error': f'Kepler prediction failed: {str(e)}'}), 500
+
 
 @app.route('/api/predictions', methods=['GET'])
 def get_predictions():
@@ -123,13 +167,10 @@ def generate_lightcurve_endpoint():
         if not koi_name:
             return jsonify({'error': 'KOI name is required'}), 400
 
-        logger.info(f"Generating lightcurve for: {koi_name}")
-        
         # Generate lightcurve
         lightcurve_success, lightcurve_path = generate_lightcurve(koi_name)
         
         if lightcurve_success and lightcurve_path:
-            logger.info(f"Lightcurve generated successfully: {lightcurve_path}")
             return jsonify({
                 'success': True,
                 'filename': os.path.basename(lightcurve_path),
@@ -137,10 +178,9 @@ def generate_lightcurve_endpoint():
                 'url': f"/api/lightcurve/{os.path.basename(lightcurve_path)}"
             })
         else:
-            logger.error(f"Failed to generate lightcurve for {koi_name}")
             return jsonify({
                 'success': False,
-                'error': 'Failed to generate lightcurve - no data available for this candidate'
+                'error': 'Failed to generate lightcurve'
             }), 500
             
     except Exception as e:
@@ -152,23 +192,17 @@ def get_lightcurve(filename):
     """Serve lightcurve images"""
     try:
         lightcurve_path = os.path.join('lightcurves', filename)
-        
-        if not os.path.exists(lightcurve_path):
-            return jsonify({'error': 'Lightcurve file not found'}), 404
-        
-        return send_file(lightcurve_path, mimetype='image/png')
-        
+        if os.path.exists(lightcurve_path):
+            return send_file(lightcurve_path, mimetype='image/png')
+        else:
+            return jsonify({'error': 'Lightcurve not found'}), 404
     except Exception as e:
-        logger.error(f"Error serving lightcurve: {str(e)}")
+        logger.error(f"Error serving lightcurve {filename}: {str(e)}")
         return jsonify({'error': 'Failed to serve lightcurve'}), 500
 
-@app.route('/api/health', methods=['GET'])
-def health_check():
-    """Health check endpoint"""
-    return jsonify({
-        'status': 'healthy',
-        'message': 'NASA Exoplanet Detector API is running'
-    })
-
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5002)))
+    print("🚀 Kepler Exoplanet Detection API starting...")
+    print("📊 Endpoints: /api/autocomplete/kepler, /api/predict/kepler")
+    print("💾 Database endpoints: /api/predictions, /api/predictions/stats, /api/predictions/save")
+    print("✨ Kepler-only mode with database persistence enabled!")
+    app.run(debug=True, host='0.0.0.0', port=5002)
