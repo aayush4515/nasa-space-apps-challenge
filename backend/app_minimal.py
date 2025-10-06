@@ -176,12 +176,28 @@ def generate_lightcurve_endpoint():
         file_path = os.path.join(lightcurves_dir, filename)
         
         if os.path.exists(file_path):
+            # Get kepid for URL construction
+            try:
+                csv_path = '../Assets/clean_kepler_dataset.csv'
+                if os.path.exists(csv_path):
+                    df = pd.read_csv(csv_path)
+                    matching_rows = df[df['kepoi_name'] == koi_name]
+                    if not matching_rows.empty:
+                        kepid = int(matching_rows['kepid'].iloc[0])
+                    else:
+                        kepid = 123456  # Default fallback
+                else:
+                    kepid = 123456  # Default fallback
+            except Exception as e:
+                logger.warning(f"Could not get kepid for {koi_name}: {str(e)}")
+                kepid = 123456  # Default fallback
+            
             return jsonify({
                 'success': True,
                 'message': 'Lightcurve already exists',
                 'filename': filename,
                 'title': f"Lightcurve for {koi_name}",
-                'url': f"/api/lightcurve/{filename}"
+                'url': f"/api/lightcurve/{kepid}.png"
             })
 
         # OPTIMIZATION: Add timeout protection
@@ -222,7 +238,7 @@ def generate_lightcurve_endpoint():
                     'success': True,
                     'filename': filename,
                     'title': f"Lightcurve for {koi_name}",
-                    'url': f"/api/lightcurve/{filename}",
+                    'url': f"/api/lightcurve/{kepid}.png",
                     'generation_time': round(generation_time, 2)
                 })
             else:
@@ -254,7 +270,9 @@ def get_lightcurve(filename):
         
         # If not found in files, try database (for backward compatibility)
         try:
-            lightcurve_data = db.get_lightcurve_by_candidate(filename.replace('.png', ''))
+            # Extract kepid from filename (e.g., "10419211.png" -> 10419211)
+            kepid = int(filename.replace('.png', ''))
+            lightcurve_data = db.get_lightcurve_by_kepid(kepid)
             if lightcurve_data:
                 return Response(
                     lightcurve_data['image_data'],
@@ -263,7 +281,7 @@ def get_lightcurve(filename):
                         'Content-Disposition': f'inline; filename="{lightcurve_data["filename"]}"'
                     }
                 )
-        except Exception as db_error:
+        except (ValueError, Exception) as db_error:
             logger.warning(f"Database lookup failed: {db_error}")
         
         return jsonify({'error': 'Lightcurve not found'}), 404
