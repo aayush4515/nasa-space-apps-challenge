@@ -157,7 +157,7 @@ class PredictionService {
           status: 'success',
           filename: data.filename,
           title: data.title,
-          url: data.url
+          url: `${this.baseURL}${data.url}`
         };
       } else {
         throw new Error(data.error || 'Lightcurve generation failed');
