@@ -47,37 +47,13 @@ def predict_kepler():
         if not koi_name:
             return jsonify({'error': 'KOI name is required'}), 400
         
-        # Create a dummy data point for the prediction
-        # The model expects a DataFrame with 15 features
-        dummy_data = pd.DataFrame({
-            'koi_period': [365.25],
-            'koi_time0bk': [0.0],
-            'koi_impact': [0.1],
-            'koi_duration': [0.5],
-            'koi_depth': [0.001],
-            'koi_prad': [1.0],
-            'koi_teq': [300.0],
-            'koi_insol': [1.0],
-            'koi_dor': [1.0],
-            'koi_count': [1],
-            'koi_numtransits': [1],
-            'koi_tranflag': [1],
-            'koi_model_snr': [10.0],
-            'koi_steff': [6000.0],
-            'koi_slogg': [4.5]
-        })
-        
-        # Make prediction with proper arguments
-        prediction_result = predict_datapoint('kepler', dummy_data)
+        # Make prediction
+        prediction_result = predict_datapoint(koi_name)
         
         if prediction_result['status'] == 'success':
             return jsonify({
-                'prediction': {
-                    'confidence': prediction_result['confidence'],
-                    'is_exoplanet': prediction_result['is_exoplanet'],
-                    'model_version': prediction_result['model_version']
-                },
-                'nasa_classification': 'UNKNOWN',
+                'prediction': prediction_result['prediction'],
+                'nasa_classification': prediction_result.get('nasa_classification', 'UNKNOWN'),
                 'message': f"Prediction completed for {koi_name}"
             })
         else:
