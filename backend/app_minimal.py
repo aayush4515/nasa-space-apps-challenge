@@ -11,6 +11,7 @@ import logging
 from ml_models import predict_datapoint
 from database import db
 from lightcurve_generator import generate_lightcurve
+from data_loader import get_kepler_data_for_prediction
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -47,28 +48,13 @@ def predict_kepler():
         if not koi_name:
             return jsonify({'error': 'KOI name is required'}), 400
         
-        # Create a dummy data point for the prediction
-        # The model expects a DataFrame with 15 features
-        dummy_data = pd.DataFrame({
-            'koi_period': [365.25],
-            'koi_time0bk': [0.0],
-            'koi_impact': [0.1],
-            'koi_duration': [0.5],
-            'koi_depth': [0.001],
-            'koi_prad': [1.0],
-            'koi_teq': [300.0],
-            'koi_insol': [1.0],
-            'koi_dor': [1.0],
-            'koi_count': [1],
-            'koi_numtransits': [1],
-            'koi_tranflag': [1],
-            'koi_model_snr': [10.0],
-            'koi_steff': [6000.0],
-            'koi_slogg': [4.5]
-        })
+        logger.info(f"Making prediction for KOI: {koi_name}")
         
-        # Make prediction with proper arguments
-        prediction_result = predict_datapoint('kepler', dummy_data)
+        # Get actual data for the KOI
+        kepler_data = get_kepler_data_for_prediction(koi_name)
+        
+        # Make prediction with actual data
+        prediction_result = predict_datapoint('kepler', kepler_data)
         
         if prediction_result['status'] == 'success':
             return jsonify({
