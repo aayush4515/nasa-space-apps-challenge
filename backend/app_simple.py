@@ -3,7 +3,7 @@ Simple Flask API for NASA Exoplanet Detection
 Minimal version that works with existing production setup
 """
 
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, Response
 from flask_cors import CORS
 import pandas as pd
 import os
@@ -203,30 +203,13 @@ def create_simple_lightcurve(kepid):
 
 @app.route('/api/lightcurve/generate', methods=['POST'])
 def generate_lightcurve_endpoint():
-    """Generate lightcurve for a specific KOI name - SIMPLE VERSION"""
+    """Generate lightcurve for a specific KOI name - MEMORY-BASED VERSION"""
     try:
         data = request.get_json()
         koi_name = data.get('koi_name')
 
         if not koi_name:
             return jsonify({'error': 'KOI name is required'}), 400
-
-        # Create lightcurves directory if it doesn't exist
-        lightcurves_dir = 'lightcurves'
-        os.makedirs(lightcurves_dir, exist_ok=True)
-
-        # Check if lightcurve already exists in files
-        filename = f"{koi_name.replace('.', '_')}.png"
-        file_path = os.path.join(lightcurves_dir, filename)
-        
-        if os.path.exists(file_path):
-            return jsonify({
-                'success': True,
-                'message': 'Lightcurve already exists',
-                'filename': filename,
-                'title': f"Lightcurve for {koi_name}",
-                'url': f"/api/lightcurve/{filename}"
-            })
 
         # Get kepid from the dataset
         try:
@@ -244,42 +227,43 @@ def generate_lightcurve_endpoint():
             logger.warning(f"Could not get kepid for {koi_name}: {str(e)}")
             kepid = 123456  # Default fallback
 
-        # Generate simple lightcurve
-        logger.info(f"Generating simple lightcurve for {koi_name} (kepid: {kepid})")
-        image_data = create_simple_lightcurve(kepid)
+        # Return success with kepid for direct image serving
+        logger.info(f"Lightcurve generation requested for {koi_name} (kepid: {kepid})")
         
-        if image_data:
-            # Save to file
-            with open(file_path, 'wb') as f:
-                f.write(image_data)
-            
-            return jsonify({
-                'success': True,
-                'filename': filename,
-                'title': f"Lightcurve for {koi_name}",
-                'url': f"/api/lightcurve/{filename}"
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to generate lightcurve'
-            }), 500
+        return jsonify({
+            'success': True,
+            'kepid': kepid,
+            'title': f"Lightcurve for {koi_name}",
+            'url': f"/api/lightcurve/{kepid}"
+        })
             
     except Exception as e:
         logger.error(f"Error generating lightcurve: {str(e)}")
         return jsonify({'error': f'Lightcurve generation failed: {str(e)}'}), 500
 
-@app.route('/api/lightcurve/<filename>', methods=['GET'])
-def get_lightcurve(filename):
-    """Serve lightcurve images from files"""
+@app.route('/api/lightcurve/<int:kepid>', methods=['GET'])
+def get_lightcurve(kepid):
+    """Serve lightcurve images generated on-demand from memory"""
     try:
-        lightcurve_path = os.path.join('lightcurves', filename)
-        if os.path.exists(lightcurve_path):
-            return send_file(lightcurve_path, mimetype='image/png')
+        logger.info(f"Generating lightcurve for kepid: {kepid}")
+        
+        # Generate lightcurve on-demand
+        image_data = create_simple_lightcurve(kepid)
+        
+        if image_data:
+            return Response(
+                image_data,
+                mimetype='image/png',
+                headers={
+                    'Content-Disposition': f'inline; filename="lightcurve_{kepid}.png"',
+                    'Cache-Control': 'public, max-age=3600'  # Cache for 1 hour
+                }
+            )
         else:
-            return jsonify({'error': 'Lightcurve not found'}), 404
+            return jsonify({'error': 'Failed to generate lightcurve'}), 500
+            
     except Exception as e:
-        logger.error(f"Error serving lightcurve {filename}: {str(e)}")
+        logger.error(f"Error serving lightcurve for kepid {kepid}: {str(e)}")
         return jsonify({'error': 'Failed to serve lightcurve'}), 500
 
 if __name__ == '__main__':
