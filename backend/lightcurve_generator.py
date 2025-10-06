@@ -6,29 +6,48 @@ import pandas as pd
 import os
 import logging
 from typing import Optional, Tuple
+from lightcurve_fallback import generate_lightcurve_fallback
 
 logger = logging.getLogger(__name__)
 
 class LightcurveGenerator:
-    def __init__(self, dataset_path: str = '../Assets/clean_kepler_dataset.csv'):
+    def __init__(self, dataset_path: str = None):
         """
         Initialize the lightcurve generator with the Kepler dataset.
         
         Args:
             dataset_path: Path to the clean Kepler dataset CSV file
         """
-        self.dataset_path = dataset_path
+        # Try multiple possible paths for the dataset
+        possible_paths = [
+            dataset_path,
+            '../Assets/clean_kepler_dataset.csv',
+            'Assets/clean_kepler_dataset.csv',
+            './Assets/clean_kepler_dataset.csv',
+            os.path.join(os.path.dirname(__file__), '..', 'Assets', 'clean_kepler_dataset.csv'),
+            os.path.join(os.path.dirname(__file__), 'Assets', 'clean_kepler_dataset.csv')
+        ]
+        
+        self.dataset_path = None
+        for path in possible_paths:
+            if path and os.path.exists(path):
+                self.dataset_path = path
+                break
+        
         self.df = None
-        self.load_dataset()
+        if self.dataset_path:
+            self.load_dataset()
+        else:
+            logger.warning("Kepler dataset not found. Will use fallback method for lightcurve generation.")
     
     def load_dataset(self):
         """Load the Kepler dataset for kepid mapping."""
         try:
             self.df = pd.read_csv(self.dataset_path)
-            logger.info(f"Loaded Kepler dataset with {len(self.df)} rows")
+            logger.info(f"Loaded Kepler dataset with {len(self.df)} rows from {self.dataset_path}")
         except Exception as e:
             logger.error(f"Error loading dataset: {str(e)}")
-            raise
+            self.df = None
     
     def get_kepid_from_kepoi_name(self, kepoi_name: str) -> Optional[int]:
         """
@@ -40,6 +59,10 @@ class LightcurveGenerator:
         Returns:
             kepid if found, None otherwise
         """
+        if self.df is None:
+            logger.warning("Dataset not loaded, cannot map kepoi_name to kepid")
+            return None
+            
         try:
             matching_rows = self.df[self.df['kepoi_name'] == kepoi_name]
             if matching_rows.empty:
@@ -126,14 +149,17 @@ class LightcurveGenerator:
             Tuple of (success, file_path)
         """
         try:
-            # Get kepid from kepoi_name
+            # First try to get kepid from dataset
             kepid = self.get_kepid_from_kepoi_name(kepoi_name)
-            if kepid is None:
-                return False, None
             
-            # Generate lightcurve
-            success, file_path = self.retrieve_lc(kepid, output_dir)
-            return success, file_path
+            if kepid is not None:
+                # Generate lightcurve using dataset mapping
+                success, file_path = self.retrieve_lc(kepid, output_dir)
+                return success, file_path
+            else:
+                # Use fallback method
+                logger.info(f"Using fallback method for {kepoi_name}")
+                return generate_lightcurve_fallback(kepoi_name, output_dir)
             
         except Exception as e:
             logger.error(f"Error generating lightcurve for {kepoi_name}: {str(e)}")
