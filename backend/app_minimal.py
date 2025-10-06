@@ -3,7 +3,7 @@ Minimal Flask API for NASA Exoplanet Detection
 Only essential endpoints - no complex routing
 """
 
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, Response
 from flask_cors import CORS
 import pandas as pd
 import os
@@ -159,7 +159,7 @@ def save_prediction():
 
 @app.route('/api/lightcurve/generate', methods=['POST'])
 def generate_lightcurve_endpoint():
-    """Generate lightcurve for a specific KOI name"""
+    """Generate lightcurve for a specific KOI name and store in database"""
     try:
         data = request.get_json()
         koi_name = data.get('koi_name')
@@ -167,16 +167,36 @@ def generate_lightcurve_endpoint():
         if not koi_name:
             return jsonify({'error': 'KOI name is required'}), 400
 
-        # Generate lightcurve
-        lightcurve_success, lightcurve_path = generate_lightcurve(koi_name)
-        
-        if lightcurve_success and lightcurve_path:
+        # Check if lightcurve already exists
+        if db.lightcurve_exists(koi_name):
             return jsonify({
                 'success': True,
-                'filename': os.path.basename(lightcurve_path),
-                'title': f"Lightcurve for {koi_name}",
-                'url': f"/api/lightcurve/{os.path.basename(lightcurve_path)}"
+                'message': 'Lightcurve already exists',
+                'candidate_id': koi_name,
+                'url': f"/api/lightcurve/{koi_name}"
             })
+
+        # Generate lightcurve
+        success, image_data, filename, kepid = generate_lightcurve(koi_name)
+        
+        if success and image_data:
+            # Save to database
+            db_success = db.save_lightcurve(koi_name, kepid, image_data, filename)
+            
+            if db_success:
+                return jsonify({
+                    'success': True,
+                    'filename': filename,
+                    'title': f"Lightcurve for {koi_name}",
+                    'candidate_id': koi_name,
+                    'kepid': kepid,
+                    'url': f"/api/lightcurve/{koi_name}"
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to save lightcurve to database'
+                }), 500
         else:
             return jsonify({
                 'success': False,
@@ -187,18 +207,66 @@ def generate_lightcurve_endpoint():
         logger.error(f"Error generating lightcurve: {str(e)}")
         return jsonify({'error': f'Lightcurve generation failed: {str(e)}'}), 500
 
-@app.route('/api/lightcurve/<filename>', methods=['GET'])
-def get_lightcurve(filename):
-    """Serve lightcurve images"""
+@app.route('/api/lightcurve/<candidate_id>', methods=['GET'])
+def get_lightcurve(candidate_id):
+    """Serve lightcurve images from database"""
     try:
-        lightcurve_path = os.path.join('lightcurves', filename)
-        if os.path.exists(lightcurve_path):
-            return send_file(lightcurve_path, mimetype='image/png')
+        # Try to get lightcurve by candidate_id first
+        lightcurve_data = db.get_lightcurve_by_candidate(candidate_id)
+        
+        if lightcurve_data:
+            return Response(
+                lightcurve_data['image_data'],
+                mimetype='image/png',
+                headers={
+                    'Content-Disposition': f'inline; filename="{lightcurve_data["filename"]}"'
+                }
+            )
         else:
             return jsonify({'error': 'Lightcurve not found'}), 404
     except Exception as e:
-        logger.error(f"Error serving lightcurve {filename}: {str(e)}")
+        logger.error(f"Error serving lightcurve {candidate_id}: {str(e)}")
         return jsonify({'error': 'Failed to serve lightcurve'}), 500
+
+@app.route('/api/lightcurve/kepid/<int:kepid>', methods=['GET'])
+def get_lightcurve_by_kepid(kepid):
+    """Serve lightcurve images by kepid from database"""
+    try:
+        lightcurve_data = db.get_lightcurve_by_kepid(kepid)
+        
+        if lightcurve_data:
+            return Response(
+                lightcurve_data['image_data'],
+                mimetype='image/png',
+                headers={
+                    'Content-Disposition': f'inline; filename="{lightcurve_data["filename"]}"'
+                }
+            )
+        else:
+            return jsonify({'error': 'Lightcurve not found'}), 404
+    except Exception as e:
+        logger.error(f"Error serving lightcurve for kepid {kepid}: {str(e)}")
+        return jsonify({'error': 'Failed to serve lightcurve'}), 500
+
+@app.route('/api/lightcurve/<candidate_id>/info', methods=['GET'])
+def get_lightcurve_info(candidate_id):
+    """Get lightcurve metadata without the image data"""
+    try:
+        lightcurve_data = db.get_lightcurve_by_candidate(candidate_id)
+        
+        if lightcurve_data:
+            return jsonify({
+                'success': True,
+                'candidate_id': candidate_id,
+                'filename': lightcurve_data['filename'],
+                'created_at': lightcurve_data['created_at'],
+                'url': f"/api/lightcurve/{candidate_id}"
+            })
+        else:
+            return jsonify({'error': 'Lightcurve not found'}), 404
+    except Exception as e:
+        logger.error(f"Error getting lightcurve info for {candidate_id}: {str(e)}")
+        return jsonify({'error': 'Failed to get lightcurve info'}), 500
 
 if __name__ == '__main__':
     print("🚀 Kepler Exoplanet Detection API starting...")

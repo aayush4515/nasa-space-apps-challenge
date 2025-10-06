@@ -36,6 +36,19 @@ class Database:
                     )
                 ''')
                 
+                # Create lightcurves table
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS lightcurves (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        candidate_id TEXT NOT NULL,
+                        kepid INTEGER NOT NULL,
+                        image_data BLOB NOT NULL,
+                        filename TEXT NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (candidate_id) REFERENCES predictions(candidate_id)
+                    )
+                ''')
+                
                 # Create index for faster queries
                 cursor.execute('''
                     CREATE INDEX IF NOT EXISTS idx_candidate_id 
@@ -50,6 +63,17 @@ class Database:
                 cursor.execute('''
                     CREATE INDEX IF NOT EXISTS idx_timestamp 
                     ON predictions(timestamp)
+                ''')
+                
+                # Create indexes for lightcurves table
+                cursor.execute('''
+                    CREATE INDEX IF NOT EXISTS idx_lightcurve_candidate_id 
+                    ON lightcurves(candidate_id)
+                ''')
+                
+                cursor.execute('''
+                    CREATE INDEX IF NOT EXISTS idx_lightcurve_kepid 
+                    ON lightcurves(kepid)
                 ''')
                 
                 conn.commit()
@@ -212,6 +236,97 @@ class Database:
                 
         except Exception as e:
             logger.error(f"Error clearing predictions: {str(e)}")
+            return False
+    
+    def save_lightcurve(self, candidate_id: str, kepid: int, image_data: bytes, filename: str) -> bool:
+        """Save lightcurve image data to the database"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    INSERT INTO lightcurves (candidate_id, kepid, image_data, filename)
+                    VALUES (?, ?, ?, ?)
+                ''', (candidate_id, kepid, image_data, filename))
+                
+                conn.commit()
+                logger.info(f"Lightcurve saved for candidate {candidate_id}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error saving lightcurve: {str(e)}")
+            return False
+    
+    def get_lightcurve_by_candidate(self, candidate_id: str) -> Dict[str, Any]:
+        """Get lightcurve image data by candidate ID"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    SELECT image_data, filename, created_at
+                    FROM lightcurves 
+                    WHERE candidate_id = ?
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                ''', (candidate_id,))
+                
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'image_data': row[0],
+                        'filename': row[1],
+                        'created_at': row[2]
+                    }
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error retrieving lightcurve for {candidate_id}: {str(e)}")
+            return None
+    
+    def get_lightcurve_by_kepid(self, kepid: int) -> Dict[str, Any]:
+        """Get lightcurve image data by kepid"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    SELECT image_data, filename, created_at, candidate_id
+                    FROM lightcurves 
+                    WHERE kepid = ?
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                ''', (kepid,))
+                
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'image_data': row[0],
+                        'filename': row[1],
+                        'created_at': row[2],
+                        'candidate_id': row[3]
+                    }
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error retrieving lightcurve for kepid {kepid}: {str(e)}")
+            return None
+    
+    def lightcurve_exists(self, candidate_id: str) -> bool:
+        """Check if lightcurve exists for a candidate"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    SELECT COUNT(*) FROM lightcurves WHERE candidate_id = ?
+                ''', (candidate_id,))
+                
+                count = cursor.fetchone()[0]
+                return count > 0
+                
+        except Exception as e:
+            logger.error(f"Error checking lightcurve existence: {str(e)}")
             return False
 
 # Global database instance
