@@ -48,7 +48,9 @@ const NavLinks = styled.div`
 
 const DropdownContainer = styled.div`
   position: relative;
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  height: 100%;
 `;
 
 const DropdownContent = styled.div`
@@ -244,6 +246,7 @@ function Header({ currentModel, onModelSwitch }) {
               to="/search" 
               active={location.pathname === '/search' || location.pathname === '/predict-manual' ? 1 : 0}
               className={location.pathname === '/search' || location.pathname === '/predict-manual' ? 'active' : ''}
+              style={{ height: '100%', display: 'flex', alignItems: 'center' }}
             >
               Predict
             </NavLink>

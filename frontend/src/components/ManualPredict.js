@@ -128,6 +128,16 @@ const NumberInput = styled.input`
     border-color: #4a9eff;
     box-shadow: 0 0 10px rgba(74, 158, 255, 0.3);
   }
+  
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  
+  &[type=number] {
+    -moz-appearance: textfield;
+  }
 `;
 
 const ValueDisplay = styled.div`
@@ -240,6 +250,15 @@ function ManualPredict({ onSearchResult }) {
   const [predictionResult, setPredictionResult] = useState(null);
 
   const handleParameterChange = (key, value) => {
+    // Allow empty string for deletion
+    if (value === '') {
+      setParameters(prev => ({
+        ...prev,
+        [key]: 0
+      }));
+      return;
+    }
+    
     const numValue = parseFloat(value);
     if (!isNaN(numValue) && numValue >= 0 && numValue <= FEATURES[key].max) {
       setParameters(prev => ({
@@ -364,8 +383,9 @@ function ManualPredict({ onSearchResult }) {
                   min="0"
                   max={config.max}
                   step={config.max > 100 ? "1" : "0.01"}
-                  value={parameters[key]}
+                  value={parameters[key] === 0 ? '' : parameters[key]}
                   onChange={(e) => handleParameterChange(key, e.target.value)}
+                  onFocus={(e) => e.target.select()}
                 />
                 <ValueDisplay>
                   Max: {config.max}
