@@ -305,7 +305,7 @@ function ManualPredict({ onSearchResult }) {
           dataset: 'manual',
           timestamp: new Date().toISOString(),
           prediction: {
-            confidence: Math.round(data.prediction.confidence * 100 * 100) / 100,
+            confidence: data.prediction.confidence,
             score: data.prediction.confidence,
             is_exoplanet: data.prediction.is_exoplanet,
             model_version: data.prediction.model_version
@@ -321,7 +321,7 @@ function ManualPredict({ onSearchResult }) {
         }
         
         const statusText = data.prediction.is_exoplanet ? 'is an exoplanet' : 'is not an exoplanet';
-        const confidencePercentage = Math.round(data.prediction.confidence * 10000) / 100;
+        const confidencePercentage = Math.round(data.prediction.confidence * 100 * 100) / 100;
         toast.success(`Prediction complete! ${confidencePercentage}% confident that the input ${statusText}.`);
       } else {
         throw new Error('Invalid response from prediction API');
@@ -436,7 +436,7 @@ function ManualPredict({ onSearchResult }) {
                     fontFamily: 'Space Mono, monospace',
                     textAlign: 'center'
                   }}>
-                    {Math.round(predictionResult.prediction.confidence * 10000) / 100}% confident
+                    {Math.round(predictionResult.prediction.confidence * 100 * 100) / 100}% confident
                   </div>
                 </div>
                 <div style={{ 
