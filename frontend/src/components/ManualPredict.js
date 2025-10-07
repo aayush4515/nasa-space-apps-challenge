@@ -117,7 +117,7 @@ const NumberInput = styled.input`
   border: 1px solid rgba(74, 158, 255, 0.3);
   border-radius: 8px;
   padding: 8px 12px;
-  color: white;
+  color: ${props => props.isEmpty ? 'rgba(255, 255, 255, 0.4)' : 'white'};
   font-family: 'Space Mono', monospace;
   font-size: 14px;
   width: 120px;
@@ -127,6 +127,7 @@ const NumberInput = styled.input`
     outline: none;
     border-color: #4a9eff;
     box-shadow: 0 0 10px rgba(74, 158, 255, 0.3);
+    color: white;
   }
   
   &::-webkit-outer-spin-button,
@@ -383,7 +384,8 @@ function ManualPredict({ onSearchResult }) {
                   min="0"
                   max={config.max}
                   step={config.max > 100 ? "1" : "0.01"}
-                  value={parameters[key] === 0 ? '' : parameters[key]}
+                  value={parameters[key] === 0 ? '0' : parameters[key]}
+                  isEmpty={parameters[key] === 0}
                   onChange={(e) => handleParameterChange(key, e.target.value)}
                   onFocus={(e) => e.target.select()}
                 />

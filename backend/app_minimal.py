@@ -123,13 +123,17 @@ def predict_manual():
             'koi_srad', 'koi_smass', 'ra', 'dec', 'koi_kepmag'
         ]
         
-        # Validate that all required parameters are present
-        missing_params = [param for param in expected_params if param not in parameters]
-        if missing_params:
-            return jsonify({'error': f'Missing parameters: {missing_params}'}), 400
+        # Validate that all required parameters are present and set defaults
+        param_values = []
+        for param in expected_params:
+            if param in parameters:
+                param_values.append(parameters[param])
+            else:
+                # Set default value to 0 for missing parameters
+                param_values.append(0.0)
+                logger.warning(f"Missing parameter {param}, using default value 0.0")
         
         # Create DataFrame with parameters in the correct order
-        param_values = [parameters[param] for param in expected_params]
         data_point = pd.DataFrame([param_values], columns=expected_params)
         
         # Use ml_models module for prediction
