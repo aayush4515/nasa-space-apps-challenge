@@ -305,7 +305,7 @@ function ManualPredict({ onSearchResult }) {
           dataset: 'manual',
           timestamp: new Date().toISOString(),
           prediction: {
-            confidence: Math.round(data.prediction.confidence * 10000) / 100,
+            confidence: Math.round(data.prediction.confidence * 100 * 100) / 100,
             score: data.prediction.confidence,
             is_exoplanet: data.prediction.is_exoplanet,
             model_version: data.prediction.model_version
