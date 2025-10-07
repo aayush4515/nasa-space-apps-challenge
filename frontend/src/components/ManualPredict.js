@@ -436,7 +436,7 @@ function ManualPredict({ onSearchResult }) {
                     fontFamily: 'Space Mono, monospace',
                     textAlign: 'center'
                   }}>
-                    {predictionResult.prediction.confidence}% confident
+                    {Math.round(predictionResult.prediction.confidence * 10000) / 100}% confident
                   </div>
                 </div>
                 <div style={{ 
