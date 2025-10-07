@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import Search from './components/Search';
+import ManualPredict from './components/ManualPredict';
 import Analytics from './components/Analytics';
 import History from './components/History';
 import DatabaseService from './services/DatabaseService';
@@ -97,6 +98,14 @@ function App() {
                   onSearchResult={handleSearchResult}
                   isLoading={isLoading}
                   setIsLoading={setIsLoading}
+                />
+              } 
+            />
+            <Route 
+              path="/predict-manual" 
+              element={
+                <ManualPredict 
+                  onSearchResult={handleSearchResult}
                 />
               } 
             />

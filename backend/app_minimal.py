@@ -106,6 +106,53 @@ def predict_kepler():
         logger.error(f"Kepler prediction error: {str(e)}")
         return jsonify({'error': f'Kepler prediction failed: {str(e)}'}), 500
 
+@app.route('/api/predict/manual', methods=['POST'])
+def predict_manual():
+    """Make prediction for manually entered parameters"""
+    try:
+        data = request.get_json()
+        parameters = data.get('parameters')
+        
+        if not parameters:
+            return jsonify({'error': 'Parameters are required'}), 400
+        
+        # Expected parameter order (matching the model training)
+        expected_params = [
+            'koi_period', 'koi_time0bk', 'koi_duration', 'koi_depth', 'koi_max_sngle_ev',
+            'koi_max_mult_ev', 'koi_num_transits', 'koi_steff', 'koi_slogg', 'koi_smet',
+            'koi_srad', 'koi_smass', 'ra', 'dec', 'koi_kepmag'
+        ]
+        
+        # Validate that all required parameters are present
+        missing_params = [param for param in expected_params if param not in parameters]
+        if missing_params:
+            return jsonify({'error': f'Missing parameters: {missing_params}'}), 400
+        
+        # Create DataFrame with parameters in the correct order
+        param_values = [parameters[param] for param in expected_params]
+        data_point = pd.DataFrame([param_values], columns=expected_params)
+        
+        # Use ml_models module for prediction
+        result = predict_datapoint('kepler', data_point)
+        
+        if result['status'] == 'success':
+            response_data = {
+                'message': 'Manual prediction completed',
+                'prediction': {
+                    'is_exoplanet': result['is_exoplanet'],
+                    'confidence': result['confidence'],
+                    'model_version': result['model_version']
+                }
+            }
+            
+            return jsonify(response_data)
+        else:
+            return jsonify({'error': result['message']}), 500
+        
+    except Exception as e:
+        logger.error(f"Manual prediction error: {str(e)}")
+        return jsonify({'error': f'Manual prediction failed: {str(e)}'}), 500
+
 
 @app.route('/api/predictions', methods=['GET'])
 def get_predictions():

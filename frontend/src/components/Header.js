@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 
@@ -44,6 +44,47 @@ const NavLinks = styled.div`
   display: flex;
   gap: 32px;
   align-items: center;
+`;
+
+const DropdownContainer = styled.div`
+  position: relative;
+  display: inline-block;
+`;
+
+const DropdownContent = styled.div`
+  display: ${props => props.show ? 'block' : 'none'};
+  position: absolute;
+  background: rgba(26, 26, 46, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(74, 158, 255, 0.3);
+  border-radius: 8px;
+  min-width: 200px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  z-index: 1001;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+`;
+
+const DropdownItem = styled(Link)`
+  display: block;
+  padding: 12px 16px;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  font-family: 'Space Mono', monospace;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  border-bottom: 1px solid rgba(74, 158, 255, 0.1);
+  
+  &:hover {
+    color: #4a9eff;
+    background: rgba(74, 158, 255, 0.1);
+  }
+  
+  &:last-child {
+    border-bottom: none;
+  }
 `;
 
 const NavLink = styled(Link)`
@@ -159,6 +200,7 @@ const StatusDot = styled.div`
 function Header({ currentModel, onModelSwitch }) {
   const location = useLocation();
   const [connectionStatus, setConnectionStatus] = React.useState('online');
+  const [showPredictDropdown, setShowPredictDropdown] = useState(false);
 
   // FIXME: Implement actual connection status checking
   React.useEffect(() => {
@@ -194,13 +236,22 @@ function Header({ currentModel, onModelSwitch }) {
           >
             Dashboard
           </NavLink>
-          <NavLink 
-            to="/search" 
-            active={location.pathname === '/search' ? 1 : 0}
-            className={location.pathname === '/search' ? 'active' : ''}
+          <DropdownContainer
+            onMouseEnter={() => setShowPredictDropdown(true)}
+            onMouseLeave={() => setShowPredictDropdown(false)}
           >
-            Predict
-          </NavLink>
+            <NavLink 
+              to="/search" 
+              active={location.pathname === '/search' || location.pathname === '/predict-manual' ? 1 : 0}
+              className={location.pathname === '/search' || location.pathname === '/predict-manual' ? 'active' : ''}
+            >
+              Predict
+            </NavLink>
+            <DropdownContent show={showPredictDropdown}>
+              <DropdownItem to="/search">Pre-existing Data</DropdownItem>
+              <DropdownItem to="/predict-manual">Predict Manually</DropdownItem>
+            </DropdownContent>
+          </DropdownContainer>
           <NavLink 
             to="/analytics" 
             active={location.pathname === '/analytics' ? 1 : 0}
