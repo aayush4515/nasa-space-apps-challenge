@@ -245,7 +245,7 @@ curl -X POST https://nasa-space-apps-challenge-frqb.onrender.com/api/lightcurve/
 
 ### Example Workflow
 
-1. Open https://nasa-space-apps-challenge-frqb.onrender.com
+1. Open https://nasa-space-apps-challenge-seven.vercel.app/
 2. Go to "Predict" → "Pre-existing Data"
 3. Type "K00752" in the search box
 4. Select "K00752.01" from filtered results
@@ -321,7 +321,7 @@ python app_minimal.py
 ```
 
 ### Live Application
-- **Production URL**: https://nasa-space-apps-challenge-frqb.onrender.com
+- **Production URL**: https://nasa-space-apps-challenge-seven.vercel.app/
 - **Backend API**: Deployed on Render with automatic scaling
 - **Database**: SQLite database with persistent storage
 - **Lightcurves**: Generated and cached for performance
