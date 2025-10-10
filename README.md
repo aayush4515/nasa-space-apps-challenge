@@ -1,29 +1,34 @@
 # NASA Exoplanet Detector 🚀
 
-A streamlined AI/ML application for detecting exoplanets using NASA space mission data. Built for the NASA Space Apps Challenge with a focus on simplicity and real-world ML predictions.
+A comprehensive AI/ML application for detecting exoplanets using NASA Kepler mission data. Built for the NASA Space Apps Challenge with real machine learning predictions, lightcurve generation, and persistent data storage.
 
 ## 🌟 Features
 
-- **Pre-trained ML Model**: Uses actual XGBoost model for Kepler dataset predictions
-- **Dual Dataset Support**: Kepler and TESS mission data analysis
-- **Interactive Search**: Searchable dropdown with 9,500+ Kepler candidates and 5,100+ TESS candidates
-- **Real Predictions**: Actual ML model predictions with confidence scores
-- **Analytics Dashboard**: Performance metrics and prediction history
-- **NASA Theme**: Beautiful space-themed interface with dark aesthetics
+- **Pre-trained XGBoost Model**: Real ML model trained on Kepler dataset with 91.17% accuracy
+- **Kepler Dataset Analysis**: 9,565+ Kepler Object of Interest (KOI) candidates
+- **Interactive Search**: Real-time searchable dropdown with keyboard navigation
+- **Manual Prediction**: Input custom parameters for ML predictions
+- **Lightcurve Generation**: Generate and visualize lightcurves using Lightkurve library
+- **Persistent Storage**: SQLite database for prediction history and analytics
+- **Real-time Analytics**: Comprehensive dashboard with charts and statistics
+- **NASA Theme**: Beautiful space-themed interface with responsive design
+- **Production Ready**: Deployed on Render with optimized performance
 
 ## 🏗️ Architecture
 
-### Backend (Flask - Minimal API)
-- **3 Essential Endpoints**: Autocomplete, Kepler predictions, TESS predictions
-- **Real ML Integration**: XGBoost model for Kepler dataset
-- **Direct Data Access**: Loads from pre-processed CSV files
-- **Minimal Dependencies**: Only essential Flask and ML libraries
+### Backend (Flask API)
+- **8 API Endpoints**: Autocomplete, predictions, manual predictions, database operations, lightcurve generation
+- **Real ML Integration**: Pre-trained XGBoost model for Kepler dataset
+- **Database Storage**: SQLite for persistent prediction history and analytics
+- **Lightcurve Generation**: Real-time lightcurve creation using Lightkurve library
+- **Production Optimized**: Timeout protection, error handling, and performance monitoring
 
-### Frontend (React)
-- **Search Interface**: Searchable dropdown with real-time filtering
-- **Prediction Results**: Confidence scores and exoplanet classification
-- **Analytics**: Prediction history and dataset usage statistics
-- **Responsive Design**: Mobile-friendly NASA-themed interface
+### Frontend (React SPA)
+- **Multi-page Interface**: Dashboard, Search, Manual Prediction, Analytics, History
+- **Interactive Components**: Real-time search, parameter sliders, charts
+- **Database Integration**: Persistent storage with real-time updates
+- **Responsive Design**: Mobile-friendly NASA-themed interface with animations
+- **State Management**: Global state with local storage fallbacks
 
 ## 🚀 Quick Start
 
@@ -74,62 +79,91 @@ A streamlined AI/ML application for detecting exoplanets using NASA space missio
 ```
 nasa-space-apps-challenge/
 ├── backend/
-│   ├── app_minimal.py         # Minimal Flask API (3 endpoints)
-│   ├── ml_models.py          # ML model with XGBoost integration
+│   ├── app_minimal.py         # Flask API with 8 endpoints
+│   ├── ml_models.py          # XGBoost model integration
+│   ├── database.py           # SQLite database operations
+│   ├── lightcurve_generator.py # Lightcurve generation
+│   ├── simple_lightcurve.py  # Fallback lightcurve generator
 │   ├── models/
 │   │   └── koi_xgb.pkl       # Pre-trained XGBoost model
+│   ├── lightcurves/          # Generated lightcurve images
+│   ├── predictions.db        # SQLite database
 │   └── requirements.txt      # Python dependencies
 ├── frontend/
 │   ├── src/
 │   │   ├── components/       # React components
-│   │   │   ├── Header.js     # Navigation
-│   │   │   ├── Dashboard.js  # Main dashboard
-│   │   │   ├── Search.js     # Prediction interface
-│   │   │   └── Analytics.js  # Analytics dashboard
+│   │   │   ├── Header.js     # Navigation with model selector
+│   │   │   ├── Dashboard.js  # Main dashboard with stats
+│   │   │   ├── Search.js     # KOI search with lightcurve
+│   │   │   ├── ManualPredict.js # Manual parameter input
+│   │   │   ├── Analytics.js  # Charts and analytics
+│   │   │   ├── History.js    # Prediction history table
+│   │   │   ├── QuickActions.js # Navigation shortcuts
+│   │   │   ├── ModelStatus.js # Model information
+│   │   │   └── RecentActivity.js # Recent predictions
 │   │   ├── services/
-│   │   │   └── PredictionService.js  # API service
-│   │   └── App.js            # Main app component
+│   │   │   ├── PredictionService.js # API service
+│   │   │   └── DatabaseService.js   # Database operations
+│   │   └── App.js            # Main app with routing
 │   └── package.json          # Node dependencies
 ├── Assets/
-│   ├── clean_kepler_dataset.csv  # Processed Kepler data
-│   └── clean_tess_dataset.csv    # Processed TESS data
+│   ├── clean_kepler_dataset.csv  # 9,565 Kepler candidates
+│   └── sky.jpg              # Background image
 ├── Datasets/
-│   ├── kepler_options.txt    # Kepler candidate IDs
-│   └── tess_options.txt        # TESS candidate IDs
+│   └── kepler_options.txt   # 9,565 KOI candidate IDs
 └── README.md
 ```
 
 ## 🔧 Configuration
 
 ### Backend Configuration
-- **API Endpoints**: Only 3 essential endpoints
+- **API Endpoints**: 8 endpoints for comprehensive functionality
 - **Model Path**: `models/koi_xgb.pkl` for Kepler predictions
+- **Database**: SQLite at `predictions.db` for persistence
 - **Data Path**: `../Assets/` for CSV datasets
+- **Lightcurves**: Generated and stored in `lightcurves/` directory
 - **Port**: 5002 (to avoid macOS AirPlay conflicts)
 
 ### Frontend Configuration
-- **Theme**: NASA space theme with dark background
-- **API Proxy**: Configured to `http://localhost:5002`
-- **Search**: Real-time filtering of candidate IDs
-- **Responsive**: Mobile-friendly design
+- **Theme**: NASA space theme with dark background and animations
+- **API Base URL**: `https://nasa-space-apps-challenge-frqb.onrender.com`
+- **Search**: Real-time filtering with keyboard navigation
+- **Charts**: Recharts library for analytics visualization
+- **Responsive**: Mobile-friendly design with styled-components
 
 ## 📊 API Endpoints
 
-### Essential Endpoints (Only 3!)
-- `GET /api/autocomplete/<dataset>` - Get candidate options (Kepler/TESS)
+### Core Endpoints
+- `GET /api/autocomplete/kepler` - Get 9,565 KOI candidate options
 - `POST /api/predict/kepler` - Make Kepler predictions with XGBoost
-- `POST /api/predict/tess` - Make TESS predictions (simulated)
+- `POST /api/predict/manual` - Make predictions with custom parameters
+
+### Database Endpoints
+- `GET /api/predictions` - Get all prediction history
+- `GET /api/predictions/stats` - Get prediction statistics
+- `POST /api/predictions/save` - Save prediction to database
+
+### Lightcurve Endpoints
+- `POST /api/lightcurve/generate` - Generate lightcurve for KOI
+- `GET /api/lightcurve/<filename>` - Serve lightcurve images
 
 ### Example Usage
 
 **Get Kepler candidates:**
 ```bash
-curl http://localhost:5002/api/autocomplete/kepler
+curl https://nasa-space-apps-challenge-frqb.onrender.com/api/autocomplete/kepler
 ```
 
 **Make Kepler prediction:**
 ```bash
-curl -X POST http://localhost:5002/api/predict/kepler \
+curl -X POST https://nasa-space-apps-challenge-frqb.onrender.com/api/predict/kepler \
+  -H "Content-Type: application/json" \
+  -d '{"koi_name": "K00752.01"}'
+```
+
+**Generate lightcurve:**
+```bash
+curl -X POST https://nasa-space-apps-challenge-frqb.onrender.com/api/lightcurve/generate \
   -H "Content-Type: application/json" \
   -d '{"koi_name": "K00752.01"}'
 ```
@@ -137,84 +171,114 @@ curl -X POST http://localhost:5002/api/predict/kepler \
 ## 🎯 Key Features
 
 ### 1. Real ML Predictions
-- **Kepler Dataset**: Uses actual XGBoost model (`koi_xgb.pkl`)
-- **TESS Dataset**: Simulated predictions for demonstration
+- **Kepler Dataset**: Uses actual XGBoost model (`koi_xgb.pkl`) with 91.17% accuracy
+- **15 Features**: KOI period, duration, depth, stellar properties, and more
 - **Confidence Scores**: Real confidence values (0.0 to 1.0)
-- **Exoplanet Classification**: Binary classification (exoplanet/not exoplanet)
+- **NASA Classification**: Shows original NASA disposition (CONFIRMED/CANDIDATE/FALSE POSITIVE)
+- **Binary Classification**: Exoplanet vs non-exoplanet predictions
 
-### 2. Interactive Search
-- **9,564 Kepler Candidates**: All KOI names from the dataset
-- **5,142 TESS Candidates**: All TOI names from the dataset
-- **Real-time Filtering**: Type to search and filter candidates
-- **Dropdown Interface**: Easy selection from available options
+### 2. Interactive Search & Manual Input
+- **9,565 Kepler Candidates**: All KOI names from the clean dataset
+- **Real-time Filtering**: Type to search with keyboard navigation
+- **Manual Parameters**: 15 sliders for custom predictions
+- **Dropdown Interface**: Easy selection with scroll indicators
 
-### 3. Analytics Dashboard
-- **Prediction History**: Track all predictions made
-- **Dataset Usage**: Kepler vs TESS prediction counts
-- **Performance Metrics**: Model accuracy and confidence trends
-- **Visual Charts**: Interactive charts with Recharts
+### 3. Lightcurve Generation
+- **Real Data**: Uses Lightkurve library to fetch actual Kepler data
+- **Fallback System**: Simple synthetic lightcurves when data unavailable
+- **Visualization**: High-quality PNG images with proper scaling
+- **Caching**: Generated lightcurves stored for quick access
 
-### 4. NASA Theme
-- **Space Aesthetics**: Dark background with space colors
-- **NASA Branding**: Official NASA color scheme
+### 4. Persistent Storage & Analytics
+- **SQLite Database**: All predictions saved with timestamps
+- **Real-time Stats**: Live analytics with charts and metrics
+- **Prediction History**: Complete table of all predictions made
+- **Performance Tracking**: Model accuracy and confidence trends
+
+### 5. Production Features
+- **Deployed on Render**: Live application at production URL
+- **Error Handling**: Graceful fallbacks and timeout protection
 - **Responsive Design**: Works on all device sizes
-- **Smooth Animations**: Hover effects and transitions
+- **NASA Theme**: Space aesthetics with smooth animations
 
 ## 🔧 Technical Details
 
 ### ML Model Integration
-- **XGBoost Model**: Pre-trained on Kepler dataset
-- **Feature Engineering**: 15 features from Kepler data
+- **XGBoost Model**: Pre-trained on Kepler dataset with 91.17% accuracy
+- **Feature Engineering**: 15 features from Kepler data (period, duration, depth, stellar properties)
 - **Prediction Pipeline**: CSV → DataFrame → Model → Confidence Score
-- **Error Handling**: Graceful fallbacks for missing data
+- **Error Handling**: Graceful fallbacks for missing data and timeouts
 
 ### Data Processing
-- **Kepler Data**: 9,564 candidates with 15 features each
-- **TESS Data**: 5,142 candidates with 16 features each
+- **Kepler Data**: 9,565 candidates with 15 features each
 - **Text Files**: Candidate IDs extracted for fast autocomplete
 - **CSV Loading**: On-demand loading for predictions
+- **Database Storage**: SQLite for persistent prediction history
+
+### Lightcurve Generation
+- **Lightkurve Library**: Fetches real Kepler data from MAST archive
+- **Fallback System**: Synthetic lightcurves when data unavailable
+- **Optimization**: Timeout protection and memory management
+- **Caching**: Generated images stored locally and in database
 
 ### Performance
-- **Fast Predictions**: < 100ms response time
+- **Fast Predictions**: < 100ms response time for ML predictions
 - **Efficient Search**: Client-side filtering for instant results
-- **Minimal Memory**: Only loads data when needed
-- **Optimized Bundle**: Clean, minimal codebase
+- **Database Queries**: Optimized with indexes for fast retrieval
+- **Production Ready**: Deployed with error handling and monitoring
 
 ## 🚀 Usage
 
 ### Making Predictions
 
-1. **Select Dataset**: Choose between Kepler or TESS
-2. **Search Candidate**: Type to filter candidate IDs
-3. **Click Predict**: Get ML prediction with confidence score
-4. **View Results**: See confidence percentage and classification
+1. **Search Existing Data**: 
+   - Navigate to "Predict" → "Pre-existing Data"
+   - Type to search 9,565 KOI candidates
+   - Click "Predict" for ML analysis
+   - Generate lightcurve visualization
+
+2. **Manual Parameter Input**:
+   - Navigate to "Predict" → "Predict Manually"
+   - Adjust 15 parameter sliders
+   - Click "Predict Exoplanet"
+   - View custom prediction results
 
 ### Example Workflow
 
-1. Open http://localhost:3000
-2. Select "Kepler Dataset" from dropdown
+1. Open https://nasa-space-apps-challenge-frqb.onrender.com
+2. Go to "Predict" → "Pre-existing Data"
 3. Type "K00752" in the search box
 4. Select "K00752.01" from filtered results
 5. Click "Predict" button
-6. View results: "85% confidence this is an exoplanet"
+6. View results: "85% confident this is an exoplanet"
+7. Click "Generate Lightcurve" for visualization
+8. Check "Analytics" for performance metrics
 
 ## 🎨 UI Components
 
 ### Search Interface
-- **Dataset Selector**: Kepler/TESS dropdown
-- **Search Input**: Real-time candidate filtering
-- **Predict Button**: Triggers ML prediction
-- **Results Display**: Confidence score and classification
+- **Real-time Search**: Type to filter 9,565 KOI candidates
+- **Keyboard Navigation**: Arrow keys and Enter for selection
+- **Predict Button**: Triggers ML prediction with loading states
+- **Results Display**: Confidence score, classification, and NASA disposition
+- **Lightcurve Generation**: One-click lightcurve visualization
+
+### Manual Prediction Interface
+- **15 Parameter Sliders**: Interactive controls for all features
+- **Real-time Validation**: Input validation with min/max values
+- **Custom Predictions**: Generate predictions with user-defined parameters
 
 ### Dashboard
-- **Statistics**: Total predictions, model accuracy
-- **Recent Activity**: Latest prediction history
-- **Quick Actions**: Navigation shortcuts
+- **Live Statistics**: Total predictions, model accuracy, exoplanets found
+- **Recent Activity**: Latest prediction history with timestamps
+- **Quick Actions**: Navigation shortcuts to all features
+- **Model Status**: Real-time model information and connection status
 
-### Analytics
-- **Prediction Charts**: Visualize prediction trends
-- **Dataset Usage**: Kepler vs TESS comparison
-- **Performance Metrics**: Model accuracy over time
+### Analytics Dashboard
+- **Interactive Charts**: Pie charts, bar charts, and line graphs
+- **Confidence Distribution**: Visual breakdown of prediction confidence
+- **Discovery Rate**: Percentage of exoplanets found
+- **Real-time Updates**: Auto-refresh every 30 seconds
 
 ## 🔧 Development
 
@@ -256,10 +320,17 @@ cd backend
 python app_minimal.py
 ```
 
+### Live Application
+- **Production URL**: https://nasa-space-apps-challenge-frqb.onrender.com
+- **Backend API**: Deployed on Render with automatic scaling
+- **Database**: SQLite database with persistent storage
+- **Lightcurves**: Generated and cached for performance
+
 ### Environment Variables
 - No environment variables required
 - All paths are relative
 - No external API keys needed
+- Production-ready with error handling
 
 ## 🤝 Contributing
 
@@ -288,14 +359,18 @@ For issues and questions:
 ## 🎯 Project Status
 
 ✅ **Working Features:**
-- Real XGBoost predictions for Kepler dataset
-- Interactive search with 9,500+ candidates
+- Real XGBoost predictions for Kepler dataset (91.17% accuracy)
+- Interactive search with 9,565 KOI candidates
+- Manual parameter input with 15 sliders
+- Lightcurve generation with real Kepler data
+- SQLite database for persistent storage
+- Real-time analytics with interactive charts
 - NASA-themed responsive interface
-- Analytics dashboard with prediction history
-- Minimal, clean codebase
+- Production deployment on Render
 
-🚀 **Ready for Production:**
-- No external dependencies
-- Self-contained application
-- Easy deployment
+🚀 **Production Ready:**
+- Live application at production URL
+- Comprehensive error handling and timeouts
+- Optimized performance with caching
 - Real ML model integration
+- Complete feature set for exoplanet detection
